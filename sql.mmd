@@ -1,0 +1,24 @@
+erDiagram
+    USER {
+        integer(10) id PK
+        integer(2) Role_id FK
+        integer(10) Address_id FK
+        varchar(255) full_name
+        varchar(255) email
+        integer(11) phone_number
+        varchar(255) password
+        integer(1) is_active
+    }
+
+    ADDRESS {
+        integer(10) id PK
+        varchar(255) city_name
+    }
+
+    ROLE {
+        integer(2) id PK
+        varchar(255) role_name
+    }
+
+    USER }o--|| ADDRESS : "belongs to"
+    USER }o--|| ROLE : "has"
