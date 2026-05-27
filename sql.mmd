@@ -19,6 +19,8 @@ erDiagram
         integer AwayTeamID FK
         integer VenueID FK
         integer OrganizerID FK
+        integer SportTypeID FK
+        integer LeagueID FK
         timestamp MatchDataTime
         varchar Title
     }
@@ -41,9 +43,19 @@ erDiagram
         varchar Name
         varchar LogoURL "nullable"
     }
+    SportType {
+        integer ID PK
+        varchar Name
+    }
+    League {
+        integer ID PK
+        varchar Name
+    }
 
     %% Relationships
     Match }o--|| Venue : "held at"
     Match }o--|| Organizer : "organized by"
     Match }o--|| Team : "home team"
     Match }o--|| Team : "away team"
+    Match }o--|| SportType : "type of sport"
+    Match }o--|| League : "belongs to league"
