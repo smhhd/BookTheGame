@@ -49,7 +49,12 @@ erDiagram
 
     Match {
         integer MatchID PK
+        integer HomeTeamID FK
+        integer AwayTeamID FK
         integer VenueID FK
+        integer OrganizerID FK
+        integer SportTypeID FK
+        integer LeagueID FK
         timestamp MatchDataTime
         varchar Title
     }
@@ -61,8 +66,33 @@ erDiagram
         varchar Address
         integer Capacity
     }
-
-
+    Organizer {
+        integer OrganizerID PK
+        varchar Name
+        varchar ContactInfo
+        varchar CancelationPolicy
+    }
+    Team {
+        integer TeamID PK
+        varchar Name
+        varchar LogoURL "nullable"
+    }
+    SportType {
+        integer ID PK
+        varchar Name
+    }
+    League {
+        integer ID PK
+        varchar Name
+    }
+    VenueSeat {
+        integer ID PK
+        integer VenueID PK,FK
+        varchar Section
+        integer RowNumber
+        integer SeatNumber
+        varchar TicketClass
+    }
 
     %% Relationships
     TicketInfo }o--|| Match : "belongs to"
@@ -73,4 +103,11 @@ erDiagram
 
     Ticket }o--|| VenueSeat : "assigned to"
 
+    VenueSeat }o--|| Venue : "located in"
+
     Match }o--|| Venue : "held at"
+    Match }o--|| Organizer : "organized by"
+    Match }o--|| Team : "home team"
+    Match }o--|| Team : "away team"
+    Match }o--|| SportType : "type of sport"
+    Match }o--|| League : "belongs to league"
