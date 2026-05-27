@@ -50,7 +50,7 @@ erDiagram
     Reservation {
         integer ID PK
         integer UserID FK
-        enum Status
+        enum Status "Pending,Reserved,Cancelled,Expired"
         timestamp ReservationTime
         timestamp ExpirationTime
         integer CancelledByUserID FK "nullable"
@@ -68,7 +68,7 @@ erDiagram
         integer ReservationID FK
         integer Amount
         enum PeymentMethod
-        enum Status
+        enum Status "Pending,Success,Failed,Refunded"
         timestamp PeymentTime "nullable"
     }
 
