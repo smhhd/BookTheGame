@@ -51,8 +51,18 @@ erDiagram
         integer ID PK
         varchar Name
     }
+    VenueSeat {
+        integer ID PK
+        integer VenueID PK,FK
+        varchar Section
+        integer RowNumber
+        integer SeatNumber
+        varchar TicketClass
+    }
 
     %% Relationships
+    VenueSeat }o--|| Venue : "located in"
+
     Match }o--|| Venue : "held at"
     Match }o--|| Organizer : "organized by"
     Match }o--|| Team : "home team"
