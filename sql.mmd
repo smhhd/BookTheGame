@@ -35,6 +35,13 @@ erDiagram
         integer TicketAmenityID PK,FK
     }
 
+    Ticket {
+        integer ID PK
+        integer TicketInfoID FK
+        integer VenueSeatID FK
+        integer VenueID FK
+    }
+
     SeatCategory {
         integer ID PK
         varchar Name
@@ -60,7 +67,10 @@ erDiagram
     %% Relationships
     TicketInfo }o--|| Match : "belongs to"
     TicketInfo }o--|| SeatCategory : "categorized by"
+    TicketInfo ||--o{ Ticket : "has"
     TicketInfo ||--o{ TicketInfo_TicketAmenity : "has amenities"
     TicketAmenity ||--o{ TicketInfo_TicketAmenity : "used by"
+
+    Ticket }o--|| VenueSeat : "assigned to"
 
     Match }o--|| Venue : "held at"
