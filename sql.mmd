@@ -53,6 +53,8 @@ erDiagram
         enum Status
         timestamp ReservationTime
         timestamp ExpirationTime
+        integer CancelledByUserID FK "nullable"
+        timestamp CancelledAt "nullable"
     }
 
     Reservation_Ticket {
@@ -118,6 +120,7 @@ erDiagram
     Ticket ||--o{ Reservation_Ticket : "part of"
 
     Reservation ||--o{ Reservation_Ticket : "contains"
+    Reservation }o--|| User : "cancel by"
 
     VenueSeat }o--|| Venue : "located in"
 
