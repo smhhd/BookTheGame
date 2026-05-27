@@ -93,6 +93,21 @@ erDiagram
         integer SeatNumber
         varchar TicketClass
     }
+    Report {
+        integer ID PK
+        integer UserID FK
+        integer ReportCategoryID FK
+        integer ReservationID FK "nullable"
+        integer TicketID FK "nullable"
+        varchar Description "nullable"
+        integer AdminID FK
+        varchar AdminResponse
+        enum Status
+    }
+    ReportCategory {
+        integer ID PK
+        varchar Name
+    }
 
     %% Relationships
     TicketInfo }o--|| Match : "belongs to"
@@ -111,3 +126,9 @@ erDiagram
     Match }o--|| Team : "away team"
     Match }o--|| SportType : "type of sport"
     Match }o--|| League : "belongs to league"
+
+    Report }o--|| User : "submitted by"
+    Report }o--|| User : "Answer by"
+    Report }o--|| ReportCategory : "categorized as"
+    Report }o--o| Reservation : "reported in (nullable)"
+    Report }o--o| Ticket : "reported in (nullable)"
