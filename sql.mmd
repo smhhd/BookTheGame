@@ -47,6 +47,19 @@ erDiagram
         varchar Name
     }
 
+    Reservation {
+        integer ID PK
+        integer UserID FK
+        enum Status
+        timestamp ReservationTime
+        timestamp ExpirationTime
+    }
+
+    Reservation_Ticket {
+        integer ReservationID PK,FK
+        integer TicketID PK,FK
+    }
+
     Match {
         integer MatchID PK
         integer HomeTeamID FK
@@ -102,6 +115,9 @@ erDiagram
     TicketAmenity ||--o{ TicketInfo_TicketAmenity : "used by"
 
     Ticket }o--|| VenueSeat : "assigned to"
+    Ticket ||--o{ Reservation_Ticket : "part of"
+
+    Reservation ||--o{ Reservation_Ticket : "contains"
 
     VenueSeat }o--|| Venue : "located in"
 
@@ -111,3 +127,5 @@ erDiagram
     Match }o--|| Team : "away team"
     Match }o--|| SportType : "type of sport"
     Match }o--|| League : "belongs to league"
+
+    User ||--o{ Reservation : "places"
