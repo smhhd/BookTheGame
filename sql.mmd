@@ -17,6 +17,7 @@ erDiagram
         integer MatchID PK
         integer VenueID FK
         timestamp MatchDataTime
+        integer OrganizerID FK
         varchar Title
     }
     Venue {
@@ -27,8 +28,14 @@ erDiagram
         varchar Address
         integer Capacity
     }
-
+    Organizer {
+        integer OrganizerID PK
+        varchar Name
+        varchar ContactInfo
+        varchar CancelationPolicy
+    }
 
 
     %% Relationships
     Match }o--|| Venue : "held at"
+    Match }o--|| Organizer : "organized by"
