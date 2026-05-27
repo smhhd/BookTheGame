@@ -15,6 +15,20 @@ erDiagram
     }
     Match {
         integer MatchID PK
+        integer VenueID FK
         timestamp MatchDataTime
         varchar Title
     }
+    Venue {
+        integer VenueID PK
+        varchar Name
+        varchar Province
+        varchar City
+        varchar Address
+        integer Capacity
+    }
+
+
+
+    %% Relationships
+    Match }o--|| Venue : "held at"
