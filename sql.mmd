@@ -62,6 +62,16 @@ erDiagram
         integer TicketID PK,FK
     }
 
+    Payment {
+        integer PeymentID PK
+        integer UserID FK
+        integer ReservationID FK
+        integer Amount
+        enum PeymentMethod
+        enum Status
+        timestamp PeymentTime "nullable"
+    }
+
     Match {
         integer MatchID PK
         integer HomeTeamID FK
@@ -121,6 +131,7 @@ erDiagram
 
     Reservation ||--o{ Reservation_Ticket : "contains"
     Reservation }o--|| User : "cancel by"
+    Reservation ||--|| Payment : "has payment"
 
     VenueSeat }o--|| Venue : "located in"
 
@@ -132,3 +143,4 @@ erDiagram
     Match }o--|| League : "belongs to league"
 
     User ||--o{ Reservation : "places"
+    User ||--o{ Payment : "makes"
