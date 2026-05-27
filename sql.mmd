@@ -24,6 +24,17 @@ erDiagram
         timestamp SaleEndDate "nullable"
     }
 
+    TicketAmenity {
+        integer TicketAmenityID PK
+        varchar AmenityName
+        varchar Description "nullable"
+    }
+
+    TicketInfo_TicketAmenity {
+        integer TicketInfoID PK,FK
+        integer TicketAmenityID PK,FK
+    }
+
     SeatCategory {
         integer ID PK
         varchar Name
@@ -49,5 +60,7 @@ erDiagram
     %% Relationships
     TicketInfo }o--|| Match : "belongs to"
     TicketInfo }o--|| SeatCategory : "categorized by"
+    TicketInfo ||--o{ TicketInfo_TicketAmenity : "has amenities"
+    TicketAmenity ||--o{ TicketInfo_TicketAmenity : "used by"
 
     Match }o--|| Venue : "held at"
