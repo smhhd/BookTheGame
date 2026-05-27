@@ -13,6 +13,22 @@ erDiagram
         integer Ceredit
         varchar UserPicUrl "nullable"
     }
+
+    TicketInfo {
+        integer ID PK
+        integer SeatCategoryID FK
+        integer MatchID FK
+        integer Price
+        integer RemainingCapacity
+        timestamp SaleStartDate "nullable"
+        timestamp SaleEndDate "nullable"
+    }
+
+    SeatCategory {
+        integer ID PK
+        varchar Name
+    }
+
     Match {
         integer MatchID PK
         integer VenueID FK
@@ -31,4 +47,7 @@ erDiagram
 
 
     %% Relationships
+    TicketInfo }o--|| Match : "belongs to"
+    TicketInfo }o--|| SeatCategory : "categorized by"
+
     Match }o--|| Venue : "held at"
