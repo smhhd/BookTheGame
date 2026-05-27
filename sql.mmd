@@ -15,9 +15,11 @@ erDiagram
     }
     Match {
         integer MatchID PK
+        integer HomeTeamID FK
+        integer AwayTeamID FK
         integer VenueID FK
-        timestamp MatchDataTime
         integer OrganizerID FK
+        timestamp MatchDataTime
         varchar Title
     }
     Venue {
@@ -34,8 +36,14 @@ erDiagram
         varchar ContactInfo
         varchar CancelationPolicy
     }
-
+    Team {
+        integer TeamID PK
+        varchar Name
+        varchar LogoURL "nullable"
+    }
 
     %% Relationships
     Match }o--|| Venue : "held at"
     Match }o--|| Organizer : "organized by"
+    Match }o--|| Team : "home team"
+    Match }o--|| Team : "away team"
