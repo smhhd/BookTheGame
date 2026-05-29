@@ -22,3 +22,35 @@ CREATE TABLE user (
     OR phone IS NOT NULL
   )
 );
+
+CREATE TABLE venue (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    province VARCHAR(100) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    address TEXT NOT NULL,
+    capacity INTEGER NOT NULL CHECK (capacity >= 0)
+);
+
+CREATE TABLE organizer (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    contact_info TEXT,
+    cancelation_policy JSON
+);
+
+CREATE TABLE team (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    logo_url VARCHAR(500)
+);
+
+CREATE TABLE sport_type (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE league (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL
+);
