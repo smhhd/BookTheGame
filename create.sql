@@ -176,3 +176,21 @@ CREATE TABLE payment (
   FOREIGN KEY (user_id) REFERENCES user(id),
   FOREIGN KEY (reservation_id) REFERENCES reservation(id) ON DELETE CASCADE
 );
+
+CREATE TABLE report (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,          -- Reporter
+    report_category_id INTEGER NOT NULL,
+    reservation_id INTEGER,
+    ticket_id INTEGER,
+    description TEXT,
+    admin_id INTEGER,
+    admin_response TEXT,
+    status report_status NOT NULL DEFAULT 'Pending',
+    FOREIGN KEY (user_id) REFERENCES user(id),
+    FOREIGN KEY (report_category_id) REFERENCES report_category(id),
+    FOREIGN KEY (reservation_id) REFERENCES reservation(id) ON DELETE SET NULL,
+    FOREIGN KEY (ticket_id) REFERENCES ticket(id) ON DELETE SET NULL,
+    FOREIGN KEY (admin_id) REFERENCES user(id),
+    CHECK (reservation_id IS NOT NULL OR ticket_id IS NOT NULL)
+);
