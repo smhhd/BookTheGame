@@ -203,3 +203,6 @@ CREATE INDEX idx_match_datetime ON match(match_date_time);
 CREATE INDEX idx_match_teams ON match(home_team_id, away_team_id);
 CREATE INDEX idx_match_venue ON match(venue_id);
 CREATE INDEX idx_match_sport_league ON match(sport_type_id, league_id);
+
+CREATE INDEX idx_report_user ON report(user_id);
+CREATE INDEX idx_report_status ON report(status);
