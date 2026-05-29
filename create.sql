@@ -152,7 +152,7 @@ CREATE TABLE reservation (
   cancelled_at TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (cancelled_by_user_id) REFERENCES users(id),
-  CHECK (expiration_time > reservation_time),
+  CONSTRAINT valid_time CHECK (expiration_time > reservation_time),
   CHECK (
     cancelled_at IS NULL
     OR cancelled_at >= reservation_time
