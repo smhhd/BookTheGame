@@ -200,6 +200,9 @@ CREATE TABLE report (
 CREATE INDEX idx_user_email ON user(email) WHERE email IS NOT NULL;
 CREATE INDEX idx_user_phone ON user(phone) WHERE phone IS NOT NULL;
 
+CREATE INDEX idx_reservation_user ON reservation(user_id);
+CREATE INDEX idx_reservation_status_expiration ON reservation(status, expiration_time);
+
 CREATE INDEX idx_match_datetime ON match(match_date_time);
 CREATE INDEX idx_match_teams ON match(home_team_id, away_team_id);
 CREATE INDEX idx_match_venue ON match(venue_id);
