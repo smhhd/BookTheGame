@@ -220,3 +220,5 @@ CREATE INDEX idx_ticket_venueseat ON ticket(venue_seat_id);
 
 CREATE INDEX idx_report_user ON report(user_id);
 CREATE INDEX idx_report_status ON report(status);
+
+CREATE INDEX idx_venueseat_venue ON venue_seat(venue_id);
