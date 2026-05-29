@@ -117,3 +117,13 @@ CREATE TABLE ticket_info_ticket_amenity (
   FOREIGN KEY (ticket_info_id) REFERENCES ticket_info(id) ON DELETE CASCADE,
   FOREIGN KEY (ticket_amenity_id) REFERENCES ticket_amenity(id) ON DELETE CASCADE
 );
+
+CREATE TABLE ticket (
+  id SERIAL PRIMARY KEY,
+  ticket_info_id INTEGER NOT NULL,
+  venue_seat_id INTEGER NOT NULL,
+  venue_id INTEGER NOT NULL,
+  FOREIGN KEY (ticket_info_id) REFERENCES ticket_info(id) ON DELETE CASCADE,
+  FOREIGN KEY (venue_seat_id, venue_id) REFERENCES venue_seat(id, venue_id) ON DELETE CASCADE,
+  UNIQUE (ticket_info_id, venue_seat_id)
+);
