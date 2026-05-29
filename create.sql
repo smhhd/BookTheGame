@@ -7,15 +7,13 @@ CREATE TYPE reservation_status AS ENUM ('Pending', 'Reserved', 'Cancelled', 'Exp
 
 CREATE TYPE payment_status AS ENUM ('Pending', 'Success', 'Failed', 'Refunded');
 
-CREATE TYPE payment_method AS ENUM (
-  'CreditCard',
-  'Wallet',
-  'Crypto',
-  'OnlineBanking'
-);
+CREATE TYPE payment_method AS ENUM ('CreditCard', 'Wallet', 'Crypto', 'OnlineBanking');
+
+CREATE TYPE report_status AS ENUM ('Pending', 'InProgress', 'Resolved', 'Rejected');
 
 -- Tables
-CREATE TABLE user (
+
+CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100),
@@ -75,6 +73,11 @@ CREATE TABLE sport_type (
 CREATE TABLE league (
   id SERIAL PRIMARY KEY,
   name VARCHAR(200) NOT NULL
+);
+
+CREATE TABLE report_category (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
 );
 
 CREATE TABLE venue_seat (
@@ -147,8 +150,8 @@ CREATE TABLE reservation (
   expiration_time TIMESTAMP NOT NULL,
   cancelled_by_user_id INTEGER,
   cancelled_at TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
-  FOREIGN KEY (cancelled_by_user_id) REFERENCES user(id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (cancelled_by_user_id) REFERENCES users(id),
   CHECK (expiration_time > reservation_time),
   CHECK (
     cancelled_at IS NULL
@@ -172,7 +175,7 @@ CREATE TABLE payment (
   payment_method payment_method NOT NULL,
   status payment_status NOT NULL DEFAULT 'Pending',
   payment_time TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES user(id),
+  FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (reservation_id) REFERENCES reservation(id) ON DELETE CASCADE
 );
 
@@ -186,19 +189,19 @@ CREATE TABLE report (
   admin_id INTEGER,
   admin_response TEXT,
   status report_status NOT NULL DEFAULT 'Pending',
-  FOREIGN KEY (user_id) REFERENCES user(id),
+  FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (report_category_id) REFERENCES report_category(id),
   FOREIGN KEY (reservation_id) REFERENCES reservation(id) ON DELETE SET NULL,
   FOREIGN KEY (ticket_id) REFERENCES ticket(id) ON DELETE SET NULL,
-  FOREIGN KEY (admin_id) REFERENCES user(id),
+  FOREIGN KEY (admin_id) REFERENCES users(id),
   CHECK (
     reservation_id IS NOT NULL
     OR ticket_id IS NOT NULL
   )
 );
 
-CREATE INDEX idx_user_email ON user(email) WHERE email IS NOT NULL;
-CREATE INDEX idx_user_phone ON user(phone) WHERE phone IS NOT NULL;
+CREATE INDEX idx_user_email ON users(email) WHERE email IS NOT NULL;
+CREATE INDEX idx_user_phone ON users(phone) WHERE phone IS NOT NULL;
 
 CREATE INDEX idx_reservation_user ON reservation(user_id);
 CREATE INDEX idx_reservation_status_expiration ON reservation(status, expiration_time);
