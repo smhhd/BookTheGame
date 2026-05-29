@@ -28,6 +28,12 @@ CREATE TABLE seat_category (
   name VARCHAR(100) NOT NULL
 );
 
+CREATE TABLE ticket_amenity (
+  id SERIAL PRIMARY KEY,
+  amenity_name VARCHAR(100) NOT NULL,
+  description TEXT
+);
+
 CREATE TABLE venue (
   id SERIAL PRIMARY KEY,
   name VARCHAR(200) NOT NULL,
@@ -102,4 +108,12 @@ CREATE TABLE ticket_info (
   FOREIGN KEY (seat_category_id) REFERENCES seat_category(id),
   FOREIGN KEY (match_id) REFERENCES match(id) ON DELETE CASCADE,
   CHECK (sale_end_date > sale_start_date)
+);
+
+CREATE TABLE ticket_info_ticket_amenity (
+  ticket_info_id INTEGER NOT NULL,
+  ticket_amenity_id INTEGER NOT NULL,
+  PRIMARY KEY (ticket_info_id, ticket_amenity_id),
+  FOREIGN KEY (ticket_info_id) REFERENCES ticket_info(id) ON DELETE CASCADE,
+  FOREIGN KEY (ticket_amenity_id) REFERENCES ticket_amenity(id) ON DELETE CASCADE
 );
