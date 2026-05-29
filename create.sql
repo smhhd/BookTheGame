@@ -23,67 +23,70 @@ CREATE TABLE user (
   )
 );
 
+CREATE TABLE seat_category (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL
+);
+
 CREATE TABLE venue (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(200) NOT NULL,
-    province VARCHAR(100) NOT NULL,
-    city VARCHAR(100) NOT NULL,
-    address TEXT NOT NULL,
-    capacity INTEGER NOT NULL CHECK (capacity >= 0)
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  province VARCHAR(100) NOT NULL,
+  city VARCHAR(100) NOT NULL,
+  address TEXT NOT NULL,
+  capacity INTEGER NOT NULL CHECK (capacity >= 0)
 );
 
 CREATE TABLE organizer (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(200) NOT NULL,
-    contact_info TEXT,
-    cancelation_policy JSON
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  contact_info TEXT,
+  cancelation_policy JSON
 );
 
 CREATE TABLE team (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(200) NOT NULL,
-    logo_url VARCHAR(500)
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  logo_url VARCHAR(500)
 );
 
 CREATE TABLE sport_type (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL
 );
 
 CREATE TABLE league (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(200) NOT NULL
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(200) NOT NULL
 );
 
-
-
 CREATE TABLE venue_seat (
-    id SERIAL,
-    venue_id INTEGER NOT NULL,
-    section VARCHAR(50) NOT NULL,
-    row_number INTEGER NOT NULL,
-    seat_number INTEGER NOT NULL,
-    ticket_class VARCHAR(50) NOT NULL,
-    PRIMARY KEY (id, venue_id),
-    FOREIGN KEY (venue_id) REFERENCES venue(id) ON DELETE CASCADE,
-    CONSTRAINT unique_seat_per_venue UNIQUE (venue_id, section, row_number, seat_number)
+  id SERIAL,
+  venue_id INTEGER NOT NULL,
+  section VARCHAR(50) NOT NULL,
+  row_number INTEGER NOT NULL,
+  seat_number INTEGER NOT NULL,
+  ticket_class VARCHAR(50) NOT NULL,
+  PRIMARY KEY (id, venue_id),
+  FOREIGN KEY (venue_id) REFERENCES venue(id) ON DELETE CASCADE,
+  CONSTRAINT unique_seat_per_venue UNIQUE (venue_id, section, row_number, seat_number)
 );
 
 CREATE TABLE match (
-    id SERIAL PRIMARY KEY,
-    home_team_id INTEGER NOT NULL,
-    away_team_id INTEGER NOT NULL,
-    venue_id INTEGER NOT NULL,
-    organizer_id INTEGER NOT NULL,
-    sport_type_id INTEGER NOT NULL,
-    league_id INTEGER NOT NULL,
-    match_date_time TIMESTAMP NOT NULL,
-    title VARCHAR(200) NOT NULL,
-    FOREIGN KEY (home_team_id) REFERENCES team(id),
-    FOREIGN KEY (away_team_id) REFERENCES team(id),
-    FOREIGN KEY (venue_id) REFERENCES venue(id),
-    FOREIGN KEY (organizer_id) REFERENCES organizer(id),
-    FOREIGN KEY (sport_type_id) REFERENCES sport_type(id),
-    FOREIGN KEY (league_id) REFERENCES league(id),
-    CHECK (home_team_id <> away_team_id)
+  id SERIAL PRIMARY KEY,
+  home_team_id INTEGER NOT NULL,
+  away_team_id INTEGER NOT NULL,
+  venue_id INTEGER NOT NULL,
+  organizer_id INTEGER NOT NULL,
+  sport_type_id INTEGER NOT NULL,
+  league_id INTEGER NOT NULL,
+  match_date_time TIMESTAMP NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  FOREIGN KEY (home_team_id) REFERENCES team(id),
+  FOREIGN KEY (away_team_id) REFERENCES team(id),
+  FOREIGN KEY (venue_id) REFERENCES venue(id),
+  FOREIGN KEY (organizer_id) REFERENCES organizer(id),
+  FOREIGN KEY (sport_type_id) REFERENCES sport_type(id),
+  FOREIGN KEY (league_id) REFERENCES league(id),
+  CHECK (home_team_id <> away_team_id)
 );
