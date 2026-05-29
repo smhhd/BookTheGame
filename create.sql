@@ -3,6 +3,8 @@ CREATE TYPE user_role AS ENUM ('Customer', 'Admin');
 
 CREATE TYPE user_status AS ENUM ('active', 'disactive');
 
+CREATE TYPE reservation_status AS ENUM ('Pending', 'Reserved', 'Cancelled', 'Expired');
+
 -- Tables
 CREATE TABLE user (
   id SERIAL PRIMARY KEY,
@@ -126,4 +128,21 @@ CREATE TABLE ticket (
   FOREIGN KEY (ticket_info_id) REFERENCES ticket_info(id) ON DELETE CASCADE,
   FOREIGN KEY (venue_seat_id, venue_id) REFERENCES venue_seat(id, venue_id) ON DELETE CASCADE,
   UNIQUE (ticket_info_id, venue_seat_id)
+);
+
+CREATE TABLE reservation (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  status reservation_status NOT NULL DEFAULT 'Pending',
+  reservation_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expiration_time TIMESTAMP NOT NULL,
+  cancelled_by_user_id INTEGER,
+  cancelled_at TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+  FOREIGN KEY (cancelled_by_user_id) REFERENCES user(id),
+  CHECK (expiration_time > reservation_time),
+  CHECK (
+    cancelled_at IS NULL
+    OR cancelled_at >= reservation_time
+  )
 );
