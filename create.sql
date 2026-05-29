@@ -56,6 +56,19 @@ CREATE TABLE league (
 );
 
 
+
+CREATE TABLE venue_seat (
+    id SERIAL,
+    venue_id INTEGER NOT NULL,
+    section VARCHAR(50) NOT NULL,
+    row_number INTEGER NOT NULL,
+    seat_number INTEGER NOT NULL,
+    ticket_class VARCHAR(50) NOT NULL,
+    PRIMARY KEY (id, venue_id),
+    FOREIGN KEY (venue_id) REFERENCES venue(id) ON DELETE CASCADE,
+    CONSTRAINT unique_seat_per_venue UNIQUE (venue_id, section, row_number, seat_number)
+);
+
 CREATE TABLE match (
     id SERIAL PRIMARY KEY,
     home_team_id INTEGER NOT NULL,
