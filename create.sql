@@ -5,6 +5,15 @@ CREATE TYPE user_status AS ENUM ('active', 'disactive');
 
 CREATE TYPE reservation_status AS ENUM ('Pending', 'Reserved', 'Cancelled', 'Expired');
 
+CREATE TYPE payment_status AS ENUM ('Pending', 'Success', 'Failed', 'Refunded');
+
+CREATE TYPE payment_method AS ENUM (
+  'CreditCard',
+  'Wallet',
+  'Crypto',
+  'OnlineBanking'
+);
+
 -- Tables
 CREATE TABLE user (
   id SERIAL PRIMARY KEY,
@@ -153,4 +162,17 @@ CREATE TABLE reservation_ticket (
   PRIMARY KEY (reservation_id, ticket_id),
   FOREIGN KEY (reservation_id) REFERENCES reservation(id) ON DELETE CASCADE,
   FOREIGN KEY (ticket_id) REFERENCES ticket(id) ON DELETE CASCADE
+);
+
+CREATE TABLE payment (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  reservation_id INTEGER NOT NULL UNIQUE,
+  -- هر رزرو حداکثر یک پرداخت موفق دارد
+  amount INTEGER NOT NULL CHECK (amount >= 0),
+  payment_method payment_method NOT NULL,
+  status payment_status NOT NULL DEFAULT 'Pending',
+  payment_time TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES user(id),
+  FOREIGN KEY (reservation_id) REFERENCES reservation(id) ON DELETE CASCADE
 );
