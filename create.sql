@@ -90,3 +90,16 @@ CREATE TABLE match (
   FOREIGN KEY (league_id) REFERENCES league(id),
   CHECK (home_team_id <> away_team_id)
 );
+
+CREATE TABLE ticket_info (
+  id SERIAL PRIMARY KEY,
+  seat_category_id INTEGER NOT NULL,
+  match_id INTEGER NOT NULL,
+  price INTEGER NOT NULL CHECK (price >= 0),
+  remaining_capacity INTEGER NOT NULL CHECK (remaining_capacity >= 0),
+  sale_start_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  sale_end_date TIMESTAMP NOT NULL,
+  FOREIGN KEY (seat_category_id) REFERENCES seat_category(id),
+  FOREIGN KEY (match_id) REFERENCES match(id) ON DELETE CASCADE,
+  CHECK (sale_end_date > sale_start_date)
+);
