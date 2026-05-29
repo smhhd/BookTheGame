@@ -194,3 +194,7 @@ CREATE TABLE report (
     FOREIGN KEY (admin_id) REFERENCES user(id),
     CHECK (reservation_id IS NOT NULL OR ticket_id IS NOT NULL)
 );
+
+
+CREATE INDEX idx_user_email ON user(email) WHERE email IS NOT NULL;
+CREATE INDEX idx_user_phone ON user(phone) WHERE phone IS NOT NULL;
