@@ -54,3 +54,23 @@ CREATE TABLE league (
     id SERIAL PRIMARY KEY,
     name VARCHAR(200) NOT NULL
 );
+
+
+CREATE TABLE match (
+    id SERIAL PRIMARY KEY,
+    home_team_id INTEGER NOT NULL,
+    away_team_id INTEGER NOT NULL,
+    venue_id INTEGER NOT NULL,
+    organizer_id INTEGER NOT NULL,
+    sport_type_id INTEGER NOT NULL,
+    league_id INTEGER NOT NULL,
+    match_date_time TIMESTAMP NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    FOREIGN KEY (home_team_id) REFERENCES team(id),
+    FOREIGN KEY (away_team_id) REFERENCES team(id),
+    FOREIGN KEY (venue_id) REFERENCES venue(id),
+    FOREIGN KEY (organizer_id) REFERENCES organizer(id),
+    FOREIGN KEY (sport_type_id) REFERENCES sport_type(id),
+    FOREIGN KEY (league_id) REFERENCES league(id),
+    CHECK (home_team_id <> away_team_id)
+);
