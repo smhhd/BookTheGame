@@ -211,5 +211,9 @@ CREATE INDEX idx_match_teams ON match(home_team_id, away_team_id);
 CREATE INDEX idx_match_venue ON match(venue_id);
 CREATE INDEX idx_match_sport_league ON match(sport_type_id, league_id);
 
+CREATE INDEX idx_ticketinfo_match ON ticket_info(match_id);
+CREATE INDEX idx_ticketinfo_seatcategory ON ticket_info(seat_category_id);
+CREATE INDEX idx_ticketinfo_price ON ticket_info(price);
+
 CREATE INDEX idx_report_user ON report(user_id);
 CREATE INDEX idx_report_status ON report(status);
