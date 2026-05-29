@@ -215,5 +215,8 @@ CREATE INDEX idx_ticketinfo_match ON ticket_info(match_id);
 CREATE INDEX idx_ticketinfo_seatcategory ON ticket_info(seat_category_id);
 CREATE INDEX idx_ticketinfo_price ON ticket_info(price);
 
+CREATE INDEX idx_ticket_ticketinfo ON ticket(ticket_info_id);
+CREATE INDEX idx_ticket_venueseat ON ticket(venue_seat_id);
+
 CREATE INDEX idx_report_user ON report(user_id);
 CREATE INDEX idx_report_status ON report(status);
