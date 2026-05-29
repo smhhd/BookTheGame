@@ -146,3 +146,11 @@ CREATE TABLE reservation (
     OR cancelled_at >= reservation_time
   )
 );
+
+CREATE TABLE reservation_ticket (
+  reservation_id INTEGER NOT NULL,
+  ticket_id INTEGER NOT NULL,
+  PRIMARY KEY (reservation_id, ticket_id),
+  FOREIGN KEY (reservation_id) REFERENCES reservation(id) ON DELETE CASCADE,
+  FOREIGN KEY (ticket_id) REFERENCES ticket(id) ON DELETE CASCADE
+);
