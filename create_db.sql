@@ -304,3 +304,118 @@ CREATE TABLE cancellation_requests (
     UNIQUE (request_id, order_id),
     UNIQUE (request_id, order_id, request_type)
 );
+
+CREATE TABLE cancellation_request_items (
+    request_id BIGINT NOT NULL,
+    order_id BIGINT NOT NULL,
+    request_type VARCHAR(20) NOT NULL,
+
+    reservation_id BIGINT NOT NULL,
+    ticket_id BIGINT NOT NULL,
+    match_id BIGINT NOT NULL,
+
+    item_action VARCHAR(20) NOT NULL,
+
+    requested_new_ticket_id BIGINT,
+
+    policy_id BIGINT,
+    policy_rule_id BIGINT,
+    organizer_id BIGINT,
+    sport_type_id INT,
+
+    penalty_percent_applied NUMERIC(5, 2) NOT NULL DEFAULT 0,
+    refund_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+
+    CHECK (request_type IN ('single_ticket', 'whole_order', 'change_seat')),
+    CHECK (item_action IN ('cancel', 'change_seat')),
+
+    CHECK (
+        (
+            request_type IN ('single_ticket', 'whole_order')
+            AND item_action = 'cancel'
+            AND requested_new_ticket_id IS NULL
+        )
+        OR
+        (
+            request_type = 'change_seat'
+            AND item_action = 'change_seat'
+            AND requested_new_ticket_id IS NOT NULL
+            AND requested_new_ticket_id <> ticket_id
+        )
+    ),
+
+    CHECK (
+        (
+            policy_id IS NULL
+            AND policy_rule_id IS NULL
+            AND organizer_id IS NULL
+            AND sport_type_id IS NULL
+        )
+        OR
+        (
+            policy_id IS NOT NULL
+            AND policy_rule_id IS NOT NULL
+            AND organizer_id IS NOT NULL
+            AND sport_type_id IS NOT NULL
+        )
+    ),
+
+    CHECK (penalty_percent_applied >= 0 AND penalty_percent_applied <= 100),
+    CHECK (refund_amount >= 0),
+    CHECK (status IN ('pending', 'approved', 'rejected')),
+
+    PRIMARY KEY (request_id, reservation_id),
+
+    FOREIGN KEY (request_id, order_id, request_type)
+        REFERENCES cancellation_requests(request_id, order_id, request_type)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (reservation_id, order_id, ticket_id)
+        REFERENCES reservations(reservation_id, order_id, ticket_id)
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (ticket_id, match_id)
+        REFERENCES tickets(ticket_id, match_id)
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (requested_new_ticket_id, match_id)
+        REFERENCES tickets(ticket_id, match_id)
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (match_id, organizer_id, sport_type_id)
+        REFERENCES matches(match_id, organizer_id, sport_type_id)
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (policy_id, organizer_id, sport_type_id)
+        REFERENCES cancellation_policies(policy_id, organizer_id, sport_type_id)
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (policy_rule_id, policy_id)
+        REFERENCES cancellation_policy_rules(rule_id, policy_id)
+        ON DELETE RESTRICT
+);
+
+CREATE TABLE refunds (
+    refund_id BIGSERIAL PRIMARY KEY,
+
+    payment_id BIGINT NOT NULL,
+    cancellation_request_id BIGINT NOT NULL,
+    order_id BIGINT NOT NULL,
+
+    amount NUMERIC(12, 2) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    refunded_at TIMESTAMP,
+
+    CHECK (amount >= 0),
+    CHECK (status IN ('pending', 'success', 'failed')),
+
+    FOREIGN KEY (payment_id, order_id)
+        REFERENCES payments(payment_id, order_id)
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (cancellation_request_id, order_id)
+        REFERENCES cancellation_requests(request_id, order_id)
+        ON DELETE RESTRICT
+);
