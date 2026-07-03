@@ -471,3 +471,15 @@ CREATE TABLE reports (
         REFERENCES reservations(reservation_id, order_id)
         ON DELETE RESTRICT
 );
+
+CREATE TABLE facilities (
+    facility_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE ticket_facilities (
+    ticket_id BIGINT NOT NULL REFERENCES tickets(ticket_id) ON DELETE CASCADE,
+    facility_id INT NOT NULL REFERENCES facilities(facility_id) ON DELETE CASCADE,
+
+    PRIMARY KEY (ticket_id, facility_id)
+);
