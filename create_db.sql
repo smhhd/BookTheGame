@@ -239,3 +239,68 @@ CREATE TABLE payments (
 
     UNIQUE (payment_id, order_id)
 );
+
+CREATE TABLE cancellation_policies (
+    policy_id BIGSERIAL PRIMARY KEY,
+
+    organizer_id BIGINT NOT NULL REFERENCES organizers(organizer_id) ON DELETE CASCADE,
+    sport_type_id INT NOT NULL REFERENCES sport_types(sport_type_id) ON DELETE RESTRICT,
+
+    name VARCHAR(150) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CHECK (status IN ('active', 'inactive')),
+
+    UNIQUE (organizer_id, sport_type_id, name),
+    UNIQUE (policy_id, organizer_id, sport_type_id)
+);
+
+CREATE TABLE cancellation_policy_rules (
+    rule_id BIGSERIAL PRIMARY KEY,
+
+    policy_id BIGINT NOT NULL REFERENCES cancellation_policies(policy_id) ON DELETE CASCADE,
+
+    min_hours_before_match NUMERIC(8, 2) NOT NULL,
+    max_hours_before_match NUMERIC(8, 2),
+    penalty_percent NUMERIC(5, 2) NOT NULL,
+
+    CHECK (min_hours_before_match >= 0),
+    CHECK (max_hours_before_match IS NULL OR max_hours_before_match > min_hours_before_match),
+    CHECK (penalty_percent >= 0 AND penalty_percent <= 100),
+
+    UNIQUE (rule_id, policy_id)
+);
+
+ALTER TABLE cancellation_policy_rules
+ADD CONSTRAINT ex_cancellation_policy_rules_no_overlap
+EXCLUDE USING gist (
+    policy_id WITH =,
+    numrange(min_hours_before_match, max_hours_before_match, '[)') WITH &&
+);
+
+CREATE TABLE cancellation_requests (
+    request_id BIGSERIAL PRIMARY KEY,
+
+    order_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+
+    request_type VARCHAR(20) NOT NULL,
+    reason TEXT,
+
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    requested_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    reviewed_by_support_id BIGINT REFERENCES support_users(user_id) ON DELETE RESTRICT,
+    reviewed_at TIMESTAMP,
+
+    CHECK (request_type IN ('single_ticket', 'whole_order', 'change_seat')),
+    CHECK (status IN ('pending', 'approved', 'rejected')),
+
+    FOREIGN KEY (order_id, user_id)
+        REFERENCES orders(order_id, user_id)
+        ON DELETE RESTRICT,
+
+    UNIQUE (request_id, order_id),
+    UNIQUE (request_id, order_id, request_type)
+);
