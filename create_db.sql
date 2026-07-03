@@ -143,3 +143,99 @@ CREATE TABLE matches (
         REFERENCES competitions(competition_id, sport_type_id)
         ON DELETE RESTRICT
 );
+
+CREATE TABLE ticket_categories (
+    category_id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT
+);
+
+CREATE TABLE seats (
+    seat_id BIGSERIAL PRIMARY KEY,
+    venue_id INT NOT NULL REFERENCES venues(venue_id) ON DELETE CASCADE,
+
+    section_name VARCHAR(100) NOT NULL,
+    row_number VARCHAR(20) NOT NULL,
+    seat_number VARCHAR(20) NOT NULL,
+
+    UNIQUE (venue_id, section_name, row_number, seat_number),
+    UNIQUE (seat_id, venue_id)
+);
+
+CREATE TABLE tickets (
+    ticket_id BIGSERIAL PRIMARY KEY,
+
+    match_id BIGINT NOT NULL,
+    venue_id INT NOT NULL,
+    category_id INT NOT NULL REFERENCES ticket_categories(category_id) ON DELETE RESTRICT,
+    seat_id BIGINT NOT NULL,
+
+    price NUMERIC(12, 2) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'available',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CHECK (price >= 0),
+    CHECK (status IN ('available', 'reserved', 'sold', 'cancelled')),
+
+    UNIQUE (match_id, seat_id),
+    UNIQUE (ticket_id, match_id),
+
+    FOREIGN KEY (match_id, venue_id)
+        REFERENCES matches(match_id, venue_id)
+        ON DELETE CASCADE,
+
+    FOREIGN KEY (seat_id, venue_id)
+        REFERENCES seats(seat_id, venue_id)
+        ON DELETE RESTRICT
+);
+
+CREATE TABLE orders (
+    order_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
+
+    status VARCHAR(25) NOT NULL DEFAULT 'pending',
+    reserved_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reserved_until TIMESTAMP NOT NULL,
+
+    CHECK (status IN ('pending', 'paid', 'partially_cancelled', 'cancelled', 'expired')),
+    CHECK (reserved_until > reserved_at),
+
+    UNIQUE (order_id, user_id)
+);
+
+CREATE TABLE reservations (
+    reservation_id BIGSERIAL PRIMARY KEY,
+
+    order_id BIGINT NOT NULL REFERENCES orders(order_id) ON DELETE RESTRICT,
+    ticket_id BIGINT NOT NULL REFERENCES tickets(ticket_id) ON DELETE RESTRICT,
+
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    price_at_reservation NUMERIC(12, 2) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    cancelled_at TIMESTAMP,
+
+    CHECK (status IN ('pending', 'paid', 'cancelled', 'expired')),
+    CHECK (price_at_reservation >= 0),
+
+    UNIQUE (reservation_id, order_id),
+    UNIQUE (reservation_id, order_id, ticket_id)
+);
+
+CREATE TABLE payments (
+    payment_id BIGSERIAL PRIMARY KEY,
+
+    order_id BIGINT NOT NULL REFERENCES orders(order_id) ON DELETE RESTRICT,
+
+    amount NUMERIC(12, 2) NOT NULL,
+    method VARCHAR(30) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    paid_at TIMESTAMP,
+    transaction_code VARCHAR(100) UNIQUE,
+
+    CHECK (amount >= 0),
+    CHECK (method IN ('bank_card', 'wallet', 'crypto')),
+    CHECK (status IN ('pending', 'success', 'failed', 'refunded')),
+
+    UNIQUE (payment_id, order_id)
+);
