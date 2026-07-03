@@ -419,3 +419,55 @@ CREATE TABLE refunds (
         REFERENCES cancellation_requests(request_id, order_id)
         ON DELETE RESTRICT
 );
+
+CREATE TABLE report_categories (
+    report_category_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE reports (
+    report_id BIGSERIAL PRIMARY KEY,
+
+    user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
+
+    order_id BIGINT,
+    ticket_id BIGINT,
+    reservation_id BIGINT,
+
+    report_category_id INT NOT NULL REFERENCES report_categories(report_category_id) ON DELETE RESTRICT,
+
+    description TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    reviewed_by_support_id BIGINT REFERENCES support_users(user_id) ON DELETE RESTRICT,
+    reviewed_at TIMESTAMP,
+
+    CHECK (status IN ('pending', 'reviewed', 'rejected')),
+
+    CHECK (
+        (
+            ticket_id IS NOT NULL
+            AND reservation_id IS NULL
+            AND order_id IS NULL
+        )
+        OR
+        (
+            ticket_id IS NULL
+            AND reservation_id IS NOT NULL
+            AND order_id IS NOT NULL
+        )
+    ),
+
+    FOREIGN KEY (ticket_id)
+        REFERENCES tickets(ticket_id)
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (order_id, user_id)
+        REFERENCES orders(order_id, user_id)
+        ON DELETE RESTRICT,
+
+    FOREIGN KEY (reservation_id, order_id)
+        REFERENCES reservations(reservation_id, order_id)
+        ON DELETE RESTRICT
+);
