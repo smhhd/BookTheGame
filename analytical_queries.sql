@@ -89,3 +89,19 @@ WHERE p.status IN ('success', 'refunded')
   AND rs.status IN ('paid', 'cancelled')
   AND p.paid_at::date = CURRENT_DATE
 ORDER BY p.paid_at ASC;
+
+-- 16. Second best-selling ticket among all tickets.
+SELECT ticket_id, sold_count
+FROM (
+    SELECT
+        t.ticket_id,
+        COUNT(rs.reservation_id) AS sold_count,
+        DENSE_RANK() OVER (ORDER BY COUNT(rs.reservation_id) DESC) AS sales_rank
+    FROM tickets t
+    JOIN reservations rs ON rs.ticket_id = t.ticket_id
+    JOIN orders o ON o.order_id = rs.order_id
+    JOIN payments p ON p.order_id = o.order_id AND p.status IN ('success', 'refunded')
+    WHERE rs.status IN ('paid', 'cancelled')
+    GROUP BY t.ticket_id
+) ranked
+WHERE sales_rank = 2;
