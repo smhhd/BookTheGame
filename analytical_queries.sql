@@ -41,3 +41,13 @@ WHERE p.status IN ('success', 'refunded')
   AND p.paid_at IS NOT NULL
 GROUP BY u.user_id, u.first_name, u.last_name, DATE_TRUNC('month', p.paid_at)
 ORDER BY payment_month, u.user_id;
+
+-- 4. Users who purchased exactly once in each city.
+SELECT c.name AS city_name, u.first_name, u.last_name, COUNT(DISTINCT o.order_id) AS purchase_count
+FROM users u
+JOIN cities c ON c.city_id = u.city_id
+JOIN orders o ON o.user_id = u.user_id
+JOIN payments p ON p.order_id = o.order_id AND p.status IN ('success', 'refunded')
+GROUP BY c.name, u.user_id, u.first_name, u.last_name
+HAVING COUNT(DISTINCT o.order_id) = 1
+ORDER BY c.name, u.last_name;
