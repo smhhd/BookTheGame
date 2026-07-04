@@ -300,3 +300,26 @@ WHERE rs.ticket_id = t.ticket_id
   AND p.status IN ('success', 'refunded')
   AND p.paid_at::date = CURRENT_DATE - 1
   AND v.name = 'Azadi Stadium';
+
+-- 22. Subject and report count for the ticket with the highest number of reports.
+WITH ticket_report_counts AS (
+    SELECT
+        COALESCE(r.ticket_id, rs.ticket_id) AS ticket_id,
+        r.report_category_id,
+        COUNT(*) AS report_count
+    FROM reports r
+    LEFT JOIN reservations rs ON rs.reservation_id = r.reservation_id
+    GROUP BY COALESCE(r.ticket_id, rs.ticket_id), r.report_category_id
+), top_ticket AS (
+    SELECT ticket_id
+    FROM ticket_report_counts
+    GROUP BY ticket_id
+    ORDER BY SUM(report_count) DESC
+    LIMIT 1
+)
+SELECT rc.name AS report_subject, SUM(trc.report_count) AS report_count
+FROM ticket_report_counts trc
+JOIN top_ticket tt ON tt.ticket_id = trc.ticket_id
+JOIN report_categories rc ON rc.report_category_id = trc.report_category_id
+GROUP BY rc.name
+ORDER BY report_count DESC;
