@@ -109,3 +109,44 @@ AS $$
       AND rs.status IN ('paid', 'cancelled')
     ORDER BY p.paid_at DESC;
 $$;
+
+-- 4. Search tickets by spectator name, teams, venue, or ticket category.
+CREATE OR REPLACE FUNCTION sp_search_tickets(p_phrase TEXT)
+RETURNS TABLE (
+    ticket_id BIGINT,
+    buyer_name TEXT,
+    sport_type VARCHAR,
+    home_team VARCHAR,
+    away_team VARCHAR,
+    venue_name VARCHAR,
+    ticket_category VARCHAR,
+    match_datetime TIMESTAMP
+)
+LANGUAGE sql
+AS $$
+    SELECT DISTINCT
+        t.ticket_id,
+        CONCAT(u.first_name, ' ', u.last_name) AS buyer_name,
+        st.name AS sport_type,
+        ht.name AS home_team,
+        at.name AS away_team,
+        v.name AS venue_name,
+        tc.name AS ticket_category,
+        m.match_datetime
+    FROM tickets t
+    JOIN matches m ON m.match_id = t.match_id
+    JOIN sport_types st ON st.sport_type_id = m.sport_type_id
+    JOIN teams ht ON ht.team_id = m.home_team_id
+    JOIN teams at ON at.team_id = m.away_team_id
+    JOIN venues v ON v.venue_id = m.venue_id
+    JOIN ticket_categories tc ON tc.category_id = t.category_id
+    LEFT JOIN reservations rs ON rs.ticket_id = t.ticket_id
+    LEFT JOIN orders o ON o.order_id = rs.order_id
+    LEFT JOIN users u ON u.user_id = o.user_id
+    WHERE COALESCE(CONCAT(u.first_name, ' ', u.last_name), '') ILIKE '%' || p_phrase || '%'
+       OR ht.name ILIKE '%' || p_phrase || '%'
+       OR at.name ILIKE '%' || p_phrase || '%'
+       OR v.name ILIKE '%' || p_phrase || '%'
+       OR tc.name ILIKE '%' || p_phrase || '%'
+    ORDER BY m.match_datetime, t.ticket_id;
+$$;
