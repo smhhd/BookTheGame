@@ -44,3 +44,33 @@ AS $$
       AND rs.status IN ('paid', 'cancelled')
     ORDER BY p.paid_at ASC;
 $$;
+
+-- 2. By support email or phone, list users whose reservations were cancelled at least once by that support.
+CREATE OR REPLACE FUNCTION sp_users_cancelled_by_support(p_support_contact TEXT)
+RETURNS TABLE (
+    user_id BIGINT,
+    first_name VARCHAR,
+    last_name VARCHAR,
+    email VARCHAR,
+    phone VARCHAR,
+    cancelled_count BIGINT
+)
+LANGUAGE sql
+AS $$
+    SELECT
+        u.user_id,
+        u.first_name,
+        u.last_name,
+        u.email,
+        u.phone,
+        COUNT(*) AS cancelled_count
+    FROM users support
+    JOIN support_users su ON su.user_id = support.user_id
+    JOIN cancellation_requests cr ON cr.reviewed_by_support_id = su.user_id
+    JOIN orders o ON o.order_id = cr.order_id
+    JOIN users u ON u.user_id = o.user_id
+    WHERE (support.email = p_support_contact OR support.phone = p_support_contact)
+      AND cr.status = 'approved'
+    GROUP BY u.user_id, u.first_name, u.last_name, u.email, u.phone
+    ORDER BY cancelled_count DESC, u.user_id;
+$$;
