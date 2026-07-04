@@ -64,3 +64,28 @@ WHERE NOT EXISTS (
       )
 );
 
+-- 15. Tickets purchased today ordered by purchase time.
+SELECT
+    p.paid_at,
+    t.ticket_id,
+    u.first_name,
+    u.last_name,
+    st.name AS sport_type,
+    ht.name AS home_team,
+    at.name AS away_team,
+    v.name AS venue_name,
+    rs.price_at_reservation
+FROM payments p
+JOIN orders o ON o.order_id = p.order_id
+JOIN users u ON u.user_id = o.user_id
+JOIN reservations rs ON rs.order_id = o.order_id
+JOIN tickets t ON t.ticket_id = rs.ticket_id
+JOIN matches m ON m.match_id = t.match_id
+JOIN sport_types st ON st.sport_type_id = m.sport_type_id
+JOIN teams ht ON ht.team_id = m.home_team_id
+JOIN teams at ON at.team_id = m.away_team_id
+JOIN venues v ON v.venue_id = m.venue_id
+WHERE p.status IN ('success', 'refunded')
+  AND rs.status IN ('paid', 'cancelled')
+  AND p.paid_at::date = CURRENT_DATE
+ORDER BY p.paid_at ASC;
