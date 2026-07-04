@@ -85,3 +85,15 @@ JOIN sport_types st ON st.sport_type_id = m.sport_type_id
 WHERE rs.status IN ('paid', 'cancelled')
 GROUP BY st.name
 ORDER BY sold_ticket_count DESC;
+
+-- 8. User with the most ticket purchases in the recent week.
+SELECT u.user_id, u.first_name, u.last_name, COUNT(*) AS purchased_ticket_count
+FROM users u
+JOIN orders o ON o.user_id = u.user_id
+JOIN payments p ON p.order_id = o.order_id AND p.status IN ('success', 'refunded')
+JOIN reservations rs ON rs.order_id = o.order_id
+WHERE p.paid_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+  AND rs.status IN ('paid', 'cancelled')
+GROUP BY u.user_id, u.first_name, u.last_name
+ORDER BY purchased_ticket_count DESC
+LIMIT 1;
