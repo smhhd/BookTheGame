@@ -95,3 +95,34 @@ AS $$
     ORDER BY purchased_ticket_count DESC, u.user_id
     LIMIT p_limit;
 $$;
+
+-- 7. By sport type, list cancelled tickets ordered by cancellation date.
+CREATE OR REPLACE FUNCTION sp_cancelled_tickets_by_sport(p_sport_type TEXT)
+RETURNS TABLE (
+    ticket_id BIGINT,
+    reservation_id BIGINT,
+    buyer_name TEXT,
+    cancelled_at TIMESTAMP,
+    match_datetime TIMESTAMP,
+    venue_name VARCHAR
+)
+LANGUAGE sql
+AS $$
+    SELECT
+        t.ticket_id,
+        rs.reservation_id,
+        CONCAT(u.first_name, ' ', u.last_name) AS buyer_name,
+        rs.cancelled_at,
+        m.match_datetime,
+        v.name AS venue_name
+    FROM reservations rs
+    JOIN orders o ON o.order_id = rs.order_id
+    JOIN users u ON u.user_id = o.user_id
+    JOIN tickets t ON t.ticket_id = rs.ticket_id
+    JOIN matches m ON m.match_id = t.match_id
+    JOIN sport_types st ON st.sport_type_id = m.sport_type_id
+    JOIN venues v ON v.venue_id = m.venue_id
+    WHERE rs.status = 'cancelled'
+      AND st.name ILIKE p_sport_type
+    ORDER BY rs.cancelled_at ASC NULLS LAST;
+$$;
