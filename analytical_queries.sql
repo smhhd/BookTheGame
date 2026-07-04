@@ -43,3 +43,24 @@ WHERE st.name = 'Football'
 GROUP BY u.user_id, u.first_name, u.last_name
 HAVING COUNT(*) <= 2
 ORDER BY football_ticket_count DESC;
+
+-- 14. Users who bought at least one ticket from Football, Volleyball, and Basketball.
+SELECT u.email, u.phone
+FROM users u
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM sport_types required_st
+    WHERE required_st.name IN ('Football', 'Volleyball', 'Basketball')
+      AND NOT EXISTS (
+          SELECT 1
+          FROM orders o
+          JOIN payments p ON p.order_id = o.order_id AND p.status IN ('success', 'refunded')
+          JOIN reservations rs ON rs.order_id = o.order_id
+          JOIN tickets t ON t.ticket_id = rs.ticket_id
+          JOIN matches m ON m.match_id = t.match_id
+          WHERE o.user_id = u.user_id
+            AND rs.status IN ('paid', 'cancelled')
+            AND m.sport_type_id = required_st.sport_type_id
+      )
+);
+
