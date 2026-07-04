@@ -44,3 +44,28 @@ AS $$
       AND rs.status IN ('paid', 'cancelled')
     ORDER BY p.paid_at ASC;
 $$;
+
+-- 5. Receive user email/phone and return other users in the same city.
+CREATE OR REPLACE FUNCTION sp_same_city_users(p_contact TEXT)
+RETURNS TABLE (
+    user_id BIGINT,
+    first_name VARCHAR,
+    last_name VARCHAR,
+    email VARCHAR,
+    phone VARCHAR,
+    city_name VARCHAR
+)
+LANGUAGE sql
+AS $$
+    WITH target_user AS (
+        SELECT user_id, city_id
+        FROM users
+        WHERE email = p_contact OR phone = p_contact
+        LIMIT 1
+    )
+    SELECT u.user_id, u.first_name, u.last_name, u.email, u.phone, c.name
+    FROM target_user tu
+    JOIN users u ON u.city_id = tu.city_id AND u.user_id <> tu.user_id
+    JOIN cities c ON c.city_id = u.city_id
+    ORDER BY u.last_name, u.first_name;
+$$;
