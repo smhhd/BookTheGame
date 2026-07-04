@@ -278,3 +278,26 @@ INSERT INTO facilities (facility_id, name) VALUES
 
 INSERT INTO ticket_facilities (ticket_id, facility_id) VALUES
 (1,1),(1,3),(2,1),(3,2),(3,5),(4,2),(4,5),(5,1),(6,1),(7,5),(8,3),(9,10),(10,4),(11,5),(12,10),(13,4),(14,10),(15,10),(16,10),(17,5),(18,3),(19,4),(20,3),(21,10),(22,4),(23,2),(24,3),(25,9),(26,9),(27,5),(28,5),(29,5),(30,4),(31,4);
+
+SELECT setval('provinces_province_id_seq', (SELECT MAX(province_id) FROM provinces));
+SELECT setval('cities_city_id_seq', (SELECT MAX(city_id) FROM cities));
+SELECT setval('users_user_id_seq', (SELECT MAX(user_id) FROM users));
+SELECT setval('organizers_organizer_id_seq', (SELECT MAX(organizer_id) FROM organizers));
+SELECT setval('sport_types_sport_type_id_seq', (SELECT MAX(sport_type_id) FROM sport_types));
+SELECT setval('teams_team_id_seq', (SELECT MAX(team_id) FROM teams));
+SELECT setval('venues_venue_id_seq', (SELECT MAX(venue_id) FROM venues));
+SELECT setval('competitions_competition_id_seq', (SELECT MAX(competition_id) FROM competitions));
+SELECT setval('matches_match_id_seq', (SELECT MAX(match_id) FROM matches));
+SELECT setval('ticket_categories_category_id_seq', (SELECT MAX(category_id) FROM ticket_categories));
+SELECT setval('seats_seat_id_seq', (SELECT MAX(seat_id) FROM seats));
+SELECT setval('tickets_ticket_id_seq', (SELECT MAX(ticket_id) FROM tickets));
+SELECT setval('orders_order_id_seq', (SELECT MAX(order_id) FROM orders));
+SELECT setval('reservations_reservation_id_seq', (SELECT MAX(reservation_id) FROM reservations));
+SELECT setval('payments_payment_id_seq', (SELECT MAX(payment_id) FROM payments));
+SELECT setval('cancellation_policies_policy_id_seq', (SELECT MAX(policy_id) FROM cancellation_policies));
+SELECT setval('cancellation_policy_rules_rule_id_seq', (SELECT MAX(rule_id) FROM cancellation_policy_rules));
+SELECT setval('cancellation_requests_request_id_seq', (SELECT MAX(request_id) FROM cancellation_requests));
+SELECT setval('refunds_refund_id_seq', (SELECT MAX(refund_id) FROM refunds));
+SELECT setval('report_categories_report_category_id_seq', (SELECT MAX(report_category_id) FROM report_categories));
+SELECT setval('reports_report_id_seq', (SELECT MAX(report_id) FROM reports));
+SELECT setval('facilities_facility_id_seq', (SELECT MAX(facility_id) FROM facilities));
