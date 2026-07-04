@@ -60,3 +60,16 @@ JOIN payments p ON p.order_id = o.order_id
 WHERE p.status IN ('success', 'refunded')
 ORDER BY p.paid_at DESC
 LIMIT 1;
+
+-- 6. Contact of users whose total payments are greater than average total payment per paying user.
+WITH user_totals AS (
+    SELECT o.user_id, SUM(p.amount) AS total_paid
+    FROM orders o
+    JOIN payments p ON p.order_id = o.order_id
+    WHERE p.status IN ('success', 'refunded')
+    GROUP BY o.user_id
+)
+SELECT u.email, u.phone, ut.total_paid
+FROM user_totals ut
+JOIN users u ON u.user_id = ut.user_id
+WHERE ut.total_paid > (SELECT AVG(total_paid) FROM user_totals);
