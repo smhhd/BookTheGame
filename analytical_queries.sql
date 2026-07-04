@@ -51,3 +51,12 @@ JOIN payments p ON p.order_id = o.order_id AND p.status IN ('success', 'refunded
 GROUP BY c.name, u.user_id, u.first_name, u.last_name
 HAVING COUNT(DISTINCT o.order_id) = 1
 ORDER BY c.name, u.last_name;
+
+-- 5. User who purchased the newest/latest ticket.
+SELECT u.*
+FROM users u
+JOIN orders o ON o.user_id = u.user_id
+JOIN payments p ON p.order_id = o.order_id
+WHERE p.status IN ('success', 'refunded')
+ORDER BY p.paid_at DESC
+LIMIT 1;
