@@ -17,3 +17,14 @@ WHERE r.role_name = 'spectator'
       JOIN reservations rs ON rs.order_id = o.order_id
       WHERE o.user_id = u.user_id
   );
+
+-- 12. Users who purchased at least 2 tickets.
+SELECT u.first_name, u.last_name, COUNT(*) AS purchased_ticket_count
+FROM users u
+JOIN orders o ON o.user_id = u.user_id
+JOIN payments p ON p.order_id = o.order_id AND p.status IN ('success', 'refunded')
+JOIN reservations rs ON rs.order_id = o.order_id
+WHERE rs.status IN ('paid', 'cancelled')
+GROUP BY u.user_id, u.first_name, u.last_name
+HAVING COUNT(*) >= 2
+ORDER BY purchased_ticket_count DESC;
