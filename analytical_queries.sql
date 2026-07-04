@@ -130,3 +130,9 @@ JOIN tickets t ON t.ticket_id = rs.ticket_id
 JOIN matches m ON m.match_id = t.match_id
 JOIN venues v ON v.venue_id = m.venue_id
 JOIN cities c ON c.city_id = v.city_id;
+
+-- 11. List support users.
+SELECT u.first_name, u.last_name, u.email, u.phone
+FROM support_users su
+JOIN users u ON u.user_id = su.user_id
+ORDER BY u.user_id;
