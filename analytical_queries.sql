@@ -17,3 +17,12 @@ WHERE r.role_name = 'spectator'
       JOIN reservations rs ON rs.order_id = o.order_id
       WHERE o.user_id = u.user_id
   );
+
+  -- 2. Users who have purchased at least one ticket.
+SELECT DISTINCT u.first_name, u.last_name
+FROM users u
+JOIN orders o ON o.user_id = u.user_id
+JOIN reservations rs ON rs.order_id = o.order_id
+JOIN payments p ON p.order_id = o.order_id
+WHERE rs.status = 'paid'
+  AND p.status = 'success';
