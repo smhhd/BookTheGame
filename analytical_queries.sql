@@ -18,7 +18,7 @@ WHERE r.role_name = 'spectator'
       WHERE o.user_id = u.user_id
   );
 
-  -- 2. Users who have purchased at least one ticket.
+-- 2. Users who have purchased at least one ticket.
 SELECT DISTINCT u.first_name, u.last_name
 FROM users u
 JOIN orders o ON o.user_id = u.user_id
@@ -26,3 +26,18 @@ JOIN reservations rs ON rs.order_id = o.order_id
 JOIN payments p ON p.order_id = o.order_id
 WHERE rs.status = 'paid'
   AND p.status = 'success';
+
+-- 3. Total successful payments by each user in different months.
+SELECT
+    u.user_id,
+    u.first_name,
+    u.last_name,
+    DATE_TRUNC('month', p.paid_at)::date AS payment_month,
+    SUM(p.amount) AS total_paid
+FROM users u
+JOIN orders o ON o.user_id = u.user_id
+JOIN payments p ON p.order_id = o.order_id
+WHERE p.status IN ('success', 'refunded')
+  AND p.paid_at IS NOT NULL
+GROUP BY u.user_id, u.first_name, u.last_name, DATE_TRUNC('month', p.paid_at)
+ORDER BY payment_month, u.user_id;
