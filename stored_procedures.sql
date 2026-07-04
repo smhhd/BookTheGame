@@ -126,3 +126,31 @@ AS $$
       AND st.name ILIKE p_sport_type
     ORDER BY rs.cancelled_at ASC NULLS LAST;
 $$;
+
+-- 8. By report subject, list users with the highest report count in that subject.
+CREATE OR REPLACE FUNCTION sp_top_reporters_by_subject(p_subject TEXT)
+RETURNS TABLE (
+    user_id BIGINT,
+    first_name VARCHAR,
+    last_name VARCHAR,
+    report_count BIGINT
+)
+LANGUAGE sql
+AS $$
+    WITH user_report_counts AS (
+        SELECT
+            u.user_id,
+            u.first_name,
+            u.last_name,
+            COUNT(*) AS report_count,
+            DENSE_RANK() OVER (ORDER BY COUNT(*) DESC) AS rnk
+        FROM users u
+        JOIN reports r ON r.user_id = u.user_id
+        JOIN report_categories rc ON rc.report_category_id = r.report_category_id
+        WHERE rc.name ILIKE p_subject
+        GROUP BY u.user_id, u.first_name, u.last_name
+    )
+    SELECT user_id, first_name, last_name, report_count
+    FROM user_report_counts
+    WHERE rnk = 1;
+$$;
