@@ -73,3 +73,15 @@ SELECT u.email, u.phone, ut.total_paid
 FROM user_totals ut
 JOIN users u ON u.user_id = ut.user_id
 WHERE ut.total_paid > (SELECT AVG(total_paid) FROM user_totals);
+
+-- 7. Sold ticket count by sport type.
+SELECT st.name AS sport_type, COUNT(*) AS sold_ticket_count
+FROM reservations rs
+JOIN orders o ON o.order_id = rs.order_id
+JOIN payments p ON p.order_id = o.order_id AND p.status IN ('success', 'refunded')
+JOIN tickets t ON t.ticket_id = rs.ticket_id
+JOIN matches m ON m.match_id = t.match_id
+JOIN sport_types st ON st.sport_type_id = m.sport_type_id
+WHERE rs.status IN ('paid', 'cancelled')
+GROUP BY st.name
+ORDER BY sold_ticket_count DESC;
