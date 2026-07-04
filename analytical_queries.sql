@@ -105,3 +105,33 @@ FROM (
     GROUP BY t.ticket_id
 ) ranked
 WHERE sales_rank = 2;
+
+-- 17. Support user with highest cancellation count and cancellation percentage.
+WITH support_cancel_stats AS (
+    SELECT
+        su.user_id,
+        COUNT(cri.reservation_id) FILTER (
+            WHERE cr.status = 'approved'
+              AND cri.status = 'approved'
+              AND cri.item_action = 'cancel'
+        ) AS approved_cancelled_tickets,
+        COUNT(cri.reservation_id) FILTER (
+            WHERE cr.reviewed_by_support_id IS NOT NULL
+        ) AS reviewed_ticket_items
+    FROM support_users su
+    LEFT JOIN cancellation_requests cr ON cr.reviewed_by_support_id = su.user_id
+    LEFT JOIN cancellation_request_items cri ON cri.request_id = cr.request_id
+    GROUP BY su.user_id
+)
+SELECT
+    u.first_name,
+    u.last_name,
+    scs.approved_cancelled_tickets,
+    CASE
+        WHEN scs.reviewed_ticket_items = 0 THEN 0
+        ELSE ROUND((scs.approved_cancelled_tickets::numeric / scs.reviewed_ticket_items) * 100, 2)
+    END AS cancellation_percentage
+FROM support_cancel_stats scs
+JOIN users u ON u.user_id = scs.user_id
+ORDER BY scs.approved_cancelled_tickets DESC, cancellation_percentage DESC
+LIMIT 1;
