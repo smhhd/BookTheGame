@@ -69,3 +69,29 @@ AS $$
     JOIN cities c ON c.city_id = u.city_id
     ORDER BY u.last_name, u.first_name;
 $$;
+
+-- 6. Receive date and n, return top n users by ticket purchases after that date.
+CREATE OR REPLACE FUNCTION sp_top_buyers_after_date(p_start_date DATE, p_limit INT)
+RETURNS TABLE (
+    user_id BIGINT,
+    first_name VARCHAR,
+    last_name VARCHAR,
+    purchased_ticket_count BIGINT
+)
+LANGUAGE sql
+AS $$
+    SELECT
+        u.user_id,
+        u.first_name,
+        u.last_name,
+        COUNT(*) AS purchased_ticket_count
+    FROM users u
+    JOIN orders o ON o.user_id = u.user_id
+    JOIN payments p ON p.order_id = o.order_id AND p.status IN ('success', 'refunded')
+    JOIN reservations rs ON rs.order_id = o.order_id
+    WHERE p.paid_at::date >= p_start_date
+      AND rs.status IN ('paid', 'cancelled')
+    GROUP BY u.user_id, u.first_name, u.last_name
+    ORDER BY purchased_ticket_count DESC, u.user_id
+    LIMIT p_limit;
+$$;
