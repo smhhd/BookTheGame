@@ -254,3 +254,18 @@ FROM support_cancel_stats scs
 JOIN users u ON u.user_id = scs.user_id
 ORDER BY scs.approved_cancelled_tickets DESC, cancellation_percentage DESC
 LIMIT 1;
+
+-- 18. Change the last name of the user with the most cancelled tickets to 'Reddington'.
+WITH target_user AS (
+    SELECT o.user_id
+    FROM orders o
+    JOIN reservations rs ON rs.order_id = o.order_id
+    WHERE rs.status = 'cancelled'
+    GROUP BY o.user_id
+    ORDER BY COUNT(*) DESC
+    LIMIT 1
+)
+UPDATE users u
+SET last_name = 'Reddington'
+FROM target_user tu
+WHERE u.user_id = tu.user_id;
