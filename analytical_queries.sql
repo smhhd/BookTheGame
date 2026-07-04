@@ -112,3 +112,21 @@ WHERE pr.name = 'Tehran'
   AND rs.status IN ('paid', 'cancelled')
 GROUP BY c.name
 ORDER BY c.name;
+
+-- 10. Cities where the oldest registered user has purchased tickets.
+WITH oldest_user AS (
+    SELECT user_id
+    FROM users
+    WHERE role_id = 1
+    ORDER BY registered_at ASC
+    LIMIT 1
+)
+SELECT DISTINCT c.name AS purchased_city
+FROM oldest_user ou
+JOIN orders o ON o.user_id = ou.user_id
+JOIN payments p ON p.order_id = o.order_id AND p.status IN ('success', 'refunded')
+JOIN reservations rs ON rs.order_id = o.order_id
+JOIN tickets t ON t.ticket_id = rs.ticket_id
+JOIN matches m ON m.match_id = t.match_id
+JOIN venues v ON v.venue_id = m.venue_id
+JOIN cities c ON c.city_id = v.city_id;
