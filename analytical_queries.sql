@@ -279,4 +279,10 @@ WHERE rs.ticket_id = t.ticket_id
   AND o.user_id = u.user_id
   AND u.last_name IN ('ردینگتون', 'Reddington')
   AND rs.status = 'cancelled';
-  
+
+-- 20. Delete all cancelled ticket reservations in the system.
+UPDATE tickets t
+SET status = 'cancelled'
+FROM reservations rs
+WHERE rs.ticket_id = t.ticket_id
+  AND rs.status = 'cancelled';
