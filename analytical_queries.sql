@@ -269,3 +269,14 @@ UPDATE users u
 SET last_name = 'Reddington'
 FROM target_user tu
 WHERE u.user_id = tu.user_id;
+
+-- 19. Delete all cancelled ticket reservations of user Reddington.
+UPDATE tickets t
+SET status = 'cancelled'
+FROM reservations rs, orders o, users u
+WHERE rs.ticket_id = t.ticket_id
+  AND rs.order_id = o.order_id
+  AND o.user_id = u.user_id
+  AND u.last_name IN ('ردینگتون', 'Reddington')
+  AND rs.status = 'cancelled';
+  
