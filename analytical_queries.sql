@@ -97,3 +97,18 @@ WHERE p.paid_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
 GROUP BY u.user_id, u.first_name, u.last_name
 ORDER BY purchased_ticket_count DESC
 LIMIT 1;
+
+-- 9. Sold tickets in Tehran province by city.
+SELECT c.name AS city_name, COUNT(*) AS sold_ticket_count
+FROM reservations rs
+JOIN orders o ON o.order_id = rs.order_id
+JOIN payments p ON p.order_id = o.order_id AND p.status IN ('success', 'refunded')
+JOIN tickets t ON t.ticket_id = rs.ticket_id
+JOIN matches m ON m.match_id = t.match_id
+JOIN venues v ON v.venue_id = m.venue_id
+JOIN cities c ON c.city_id = v.city_id
+JOIN provinces pr ON pr.province_id = c.province_id
+WHERE pr.name = 'Tehran'
+  AND rs.status IN ('paid', 'cancelled')
+GROUP BY c.name
+ORDER BY c.name;
