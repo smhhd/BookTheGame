@@ -74,3 +74,38 @@ AS $$
     GROUP BY u.user_id, u.first_name, u.last_name, u.email, u.phone
     ORDER BY cancelled_count DESC, u.user_id;
 $$;
+
+-- 3. By city name, list purchased tickets in that venue city.
+CREATE OR REPLACE FUNCTION sp_purchased_tickets_by_city(p_city_name TEXT)
+RETURNS TABLE (
+    ticket_id BIGINT,
+    buyer_first_name VARCHAR,
+    buyer_last_name VARCHAR,
+    sport_type VARCHAR,
+    venue_name VARCHAR,
+    match_datetime TIMESTAMP,
+    paid_at TIMESTAMP
+)
+LANGUAGE sql
+AS $$
+    SELECT
+        t.ticket_id,
+        u.first_name,
+        u.last_name,
+        st.name,
+        v.name,
+        m.match_datetime,
+        p.paid_at
+    FROM cities c
+    JOIN venues v ON v.city_id = c.city_id
+    JOIN matches m ON m.venue_id = v.venue_id
+    JOIN sport_types st ON st.sport_type_id = m.sport_type_id
+    JOIN tickets t ON t.match_id = m.match_id
+    JOIN reservations rs ON rs.ticket_id = t.ticket_id
+    JOIN orders o ON o.order_id = rs.order_id
+    JOIN users u ON u.user_id = o.user_id
+    JOIN payments p ON p.order_id = o.order_id AND p.status IN ('success', 'refunded')
+    WHERE c.name ILIKE p_city_name
+      AND rs.status IN ('paid', 'cancelled')
+    ORDER BY p.paid_at DESC;
+$$;
