@@ -286,3 +286,17 @@ SET status = 'cancelled'
 FROM reservations rs
 WHERE rs.ticket_id = t.ticket_id
   AND rs.status = 'cancelled';
+
+-- 21. Reduce by 10% the price of tickets sold yesterday for matches at Azadi Stadium.
+UPDATE tickets t
+SET price = ROUND(t.price * 0.90, 2)
+FROM reservations rs
+JOIN orders o ON o.order_id = rs.order_id
+JOIN payments p ON p.order_id = o.order_id
+JOIN matches m ON TRUE
+JOIN venues v ON v.venue_id = m.venue_id
+WHERE rs.ticket_id = t.ticket_id
+  AND t.match_id = m.match_id
+  AND p.status IN ('success', 'refunded')
+  AND p.paid_at::date = CURRENT_DATE - 1
+  AND v.name = 'Azadi Stadium';
