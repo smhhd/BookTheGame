@@ -1,0 +1,55 @@
+{
+  "name": "book-the-game-backend",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Phase 3 REST API for the Book The Game PostgreSQL project",
+  "main": "dist/src/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/server.js",
+    "job:expire": "tsx src/jobs/runExpirationJob.ts",
+    "test": "jest --runInBand",
+    "test:unit": "jest --runInBand tests/unit",
+    "test:integration": "jest --runInBand tests/integration",
+    "test:concurrency": "tsx tests/concurrency/reservation-concurrency.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "node-cron": "^4.2.1",
+    "pg": "^8.16.3",
+    "redis": "^5.6.1",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jest": "^29.5.14",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.0.14",
+    "@types/pg": "^8.15.4",
+    "@types/supertest": "^6.0.3",
+    "@types/swagger-ui-express": "^4.1.8",
+    "jest": "^29.7.0",
+    "jest-util": "^29.7.0",
+    "source-map": "^0.6.1",
+    "source-map-support": "^0.5.21",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.2.6",
+    "tsx": "^4.20.3",
+    "type-detect": "^4.1.0",
+    "typescript": "^5.8.3"
+  }
+}

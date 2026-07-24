@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: book_the_game
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: ["5432:5432"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./create_db.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./indexes.sql:/docker-entrypoint-initdb.d/02-indexes.sql:ro
+      - ./sample_data.sql:/docker-entrypoint-initdb.d/03-sample.sql:ro
+      - ./stored_procedures.sql:/docker-entrypoint-initdb.d/04-functions.sql:ro
+      - ./sql/migrations/001_add_payment_reports.sql:/docker-entrypoint-initdb.d/05-phase3.sql:ro
+      - ./sql/migrations/002_phase3_completeness.sql:/docker-entrypoint-initdb.d/06-phase3-completeness.sql:ro
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+  backend:
+    build: .
+    depends_on: [postgres, redis]
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/book_the_game
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: docker-development-jwt-secret-change-123456
+      OTP_HASH_SECRET: docker-development-otp-secret-change-123456
+      EXPOSE_DEV_OTP: "true"
+      CORS_ORIGIN: http://localhost:5173
+    ports: ["3000:3000"]
+volumes:
+  postgres_data:
