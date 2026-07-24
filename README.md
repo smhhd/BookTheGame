@@ -9,8 +9,9 @@ Express، PostgreSQL و Redis. تمام SQLها مستقیم و پارامتری
 لایه‌ها در `src/routes`، `controllers`، `services` و `repositories` جدا هستند.
 Validation با Zod، احراز هویت با JWT، هش رمز با bcryptjs، امنیت HTTP با Helmet
 و محدودسازی Auth با express-rate-limit انجام می‌شود. Redis فقط برای OTP و
-Cache-Aside است؛ قطعی Redis خواندن داده‌های عمومی از PostgreSQL را متوقف
-نمی‌کند، اما OTP تا بازگشت Redis با 503 پاسخ می‌دهد.
+Cache-Aside استفاده می‌شود. خطاهای عملیاتی Cache باعث شکست عملیات اصلی
+PostgreSQL نمی‌شوند؛ بااین‌حال OTP به Redis وابسته است و اتصال اولیه Redis طبق
+سیاست reconnect کلاینت تا زمان برقراری دوباره تلاش می‌شود.
 
 ## تطبیق با Schema واقعی
 
@@ -19,7 +20,8 @@ Cache-Aside است؛ قطعی Redis خواندن داده‌های عمومی ا
   هر رکورد صفر یا یک است.
 - پرداخت متعلق به `orders` است. `POST /api/payments` یک `reservationId`
   می‌گیرد، سفارش آن را پیدا می‌کند و مبلغ تمام آیتم‌های pending سفارش را از
-  دیتابیس محاسبه می‌کند.
+  دیتابیس محاسبه می‌کند. پرداخت موفق با کیف پول، موجودی را در همان تراکنش و
+  به‌صورت اتمیک بررسی و کسر می‌کند.
 - وضعیت‌های معتبر دقیقاً از CHECKهای Schema استفاده شده‌اند.
 - سیاست جریمه از `cancellation_policies` و `cancellation_policy_rules` خوانده
   می‌شود و Refund در `refunds` ثبت می‌گردد.
@@ -41,7 +43,6 @@ tests/
   unit/ integration/ concurrency/
 sql/migrations/
 postman/
-docs/
 ```
 
 ## پیش‌نیاز و نصب محلی
@@ -118,15 +119,17 @@ Compose در اولین ساخت Volume، Schema، Index، Sample، Function و 
 | GET | `/api/reservations/active` | کاربر | رزرو فعال |
 | GET | `/api/reservations/history` | کاربر | تاریخچه |
 | POST | `/api/payments` | کاربر | پرداخت محلی سفارش |
-| GET | `/api/reservations/:id/cancellation-penalty` | مالک/پشتیبان | پیش‌نمایش جریمه |
-| POST | `/api/reservations/:id/cancel` | مالک/پشتیبان | کنسلی و Refund |
+| GET | `/api/reservations/:reservationId/cancellation-penalty` | مالک/پشتیبان | پیش‌نمایش جریمه |
+| POST | `/api/reservations/:reservationId/cancel` | مالک/پشتیبان | کنسلی و Refund |
 | POST | `/api/reports` | کاربر | گزارش مشکل |
-| GET | `/api/reports/my` | کاربر | گزارش‌های من |
-| GET | `/api/admin/reports[/:id]` | پشتیبان | بررسی گزارش |
+| GET | `/api/reports/my` | کاربر | گزارش‌های من و پاسخ پشتیبان |
+| GET | `/api/admin/reports` | پشتیبان | فهرست گزارش‌ها |
+| GET | `/api/admin/reports/:id` | پشتیبان | جزئیات گزارش |
 | PATCH | `/api/admin/reports/:id/status` | پشتیبان | وضعیت گزارش |
-| GET | `/api/admin/reservations[/:id]` | پشتیبان | بررسی رزرو |
+| GET | `/api/admin/reservations` | پشتیبان | فهرست رزروها |
+| GET | `/api/admin/reservations/:id` | پشتیبان | جزئیات رزرو |
 | PATCH | `/api/admin/reservations/:id/status` | پشتیبان | وضعیت رزرو |
-| PATCH | `/api/admin/reservations/:id/ticket` | پشتیبان | تغییر بلیت رزرو با `ticketId` |
+| PATCH | `/api/admin/reservations/:id/ticket` | پشتیبان | تغییر بلیت رزرو pending |
 | GET | `/api/admin/payments/suspicious` | پشتیبان | پرداخت مشکوک |
 
 فیلترهای Tickets: `sportTypeId`, `homeTeamId`, `awayTeamId`, `cityId`,
@@ -134,6 +137,22 @@ Compose در اولین ساخت Volume، Schema، Index، Sample، Function و 
 `remainingOnly`, `sortBy`, `sortOrder`, `page`, `limit`. تاریخ‌ها باید ISO-8601
 همراه offset باشند. Sortهای مجاز: `matchDate`, `price`, `createdAt`,
 `ticketId`.
+
+بدنه‌های مهم:
+
+| Endpoint | Body |
+|---|---|
+| `POST /api/auth/signup` | `firstName`, `lastName`, `email` یا `phone`, `password`, `cityId?` |
+| `POST /api/auth/otp/request` | `identifier` |
+| `POST /api/auth/otp/verify` | `identifier`, `otp` شش‌رقمی |
+| `PATCH /api/users/me` | حداقل یکی از فیلدهای پروفایل |
+| `POST /api/reservations` | `ticketIds` یکتا، حداکثر ۱۰ مورد |
+| `POST /api/payments` | `reservationId`, `method`, `simulateStatus?` |
+| `POST /api/reservations/:reservationId/cancel` | `reason?` |
+| `POST /api/reports` | `categoryId`, `description` و دقیقاً یکی از `ticketId`، `reservationId` یا `paymentId` |
+| `PATCH /api/admin/reports/:id/status` | `status`, `response?` |
+| `PATCH /api/admin/reservations/:id/status` | `status` |
+| `PATCH /api/admin/reservations/:id/ticket` | `ticketId` از همان مسابقه |
 
 نمونه:
 
@@ -152,6 +171,10 @@ Authorization: Bearer <token>
 `simulateStatus=FAILED` فقط در Development/Test مجاز است. در Production مسیر
 همیشه نتیجه واقعی Provider محلی فعلی (`SUCCESS`) را می‌پذیرد؛ اتصال بانک واقعی
 جزو این فاز نیست.
+
+در روش `wallet`، کمبود موجودی با خطای `INSUFFICIENT_WALLET_BALANCE` پاسخ داده
+می‌شود و هیچ پرداختی ثبت یا مبلغی کسر نمی‌شود. تغییر بلیت توسط پشتیبان فقط برای
+رزرو pending، پیش از انقضا و به یک بلیت available از همان مسابقه مجاز است.
 
 ## قالب پاسخ
 
@@ -185,7 +208,9 @@ Authorization: Bearer <token>
 Cities، Venues، Profile، Search و Ticket Details با Cache-Aside و TTLهای Environment
 کش می‌شوند. کلید Search از JSON مرتب‌شده و SHA-256 ساخته می‌شود. هر تغییر
 ظرفیت فقط پس از Commit شمارنده `cache:tickets:version` را افزایش می‌دهد؛ Cache
-قدیمی دیگر خوانده نمی‌شود و با TTL حذف می‌شود. پروفایل حساس کش نشده است.
+قدیمی دیگر خوانده نمی‌شود و با TTL حذف می‌شود. خروجی پروفایل بدون
+`password_hash` کش می‌شود و پس از ویرایش پروفایل، پرداخت کیف پول یا Refund
+کلید آن حذف می‌گردد.
 
 ## تست
 
@@ -195,14 +220,19 @@ npm test
 npm run test:integration
 ```
 
+در وضعیت فعلی ۷ Suite و ۱۷ تست خودکار وجود دارد؛ تست‌های رگرسیون پرداخت کیف
+پول، پاک‌سازی Cache پس از Refund، پاسخ پشتیبان و تغییر بلیت رزرو را نیز پوشش
+می‌دهند.
+
 تست همروندی واقعی نیازمند یک بلیط available برای مسابقه آینده است:
 
 ```bash
-set CONCURRENCY_TICKET_ID=4
+set CONCURRENCY_TICKET_ID=123
 set CONCURRENCY_USER_ID=1
 npm run test:concurrency
 ```
 
+شناسه‌های `123` و `1` نمونه‌اند و باید با بلیت آینده و کاربر موجود جایگزین شوند.
 Script دو Promise هم‌زمان می‌فرستد و سپس Assert می‌کند دقیقاً یکی موفق و فقط
 یک reservation فعال موجود باشد. اجرای Integration کامل به PostgreSQL و Redis
 اختصاصی Test نیاز دارد؛ از دیتابیس Production استفاده نکنید.
@@ -211,11 +241,14 @@ Script دو Promise هم‌زمان می‌فرستد و سپس Assert می‌ک
 
 `postman/BookTheGame.postman_collection.json` را Import و `baseUrl` را تنظیم
 کنید. اسکریپت Signup/OTP Verify توکن پاسخ را خودکار در متغیر `token` ذخیره
-می‌کند. شناسه‌های نمونه باید با دیتابیس شما هماهنگ شوند.
+می‌کند. برای درخواست‌های `/api/admin` مقدار `token` باید با JWT یک کاربر
+`support` جایگزین شود. شناسه‌های نمونه نیز باید با دیتابیس هماهنگ شوند.
 
 ## محدودیت‌ها و فاز چهارم
 
 - Email/SMS و درگاه بانکی Provider آزمایشی و قابل تعویض دارند.
+- در قطعی اولیه Redis، reconnect کلاینت ممکن است درخواست وابسته به Cache یا OTP
+  را تا زمان برقراری اتصال معطل نگه دارد.
 - Schema برای ورزش‌های مختلف ستون اختصاصی جدا ندارد؛ پاسخ `sportSpecificDetails`
   فقط از اطلاعات واقعی صندلی، نوع محل و امکانات موجود ساخته می‌شود و داده‌ای
   حدس زده نمی‌شود.
@@ -224,15 +257,8 @@ Script دو Promise هم‌زمان می‌فرستد و سپس Assert می‌ک
 - Elasticsearch و UI عمداً مربوط به فاز چهارم‌اند. پیشنهاد بعدی Outbox برای
   Sync مطمئن PostgreSQL/Elasticsearch و Autocomplete است.
 
-## پیشنهاد Git
+## وضعیت Git
 
-Branch پیشنهادی: `phase-3-backend`. تاریخچه Rewrite نشده است. تقسیم Commit:
-
-1. `feat: initialize backend and database connections`
-2. `feat: implement otp signup and jwt authentication`
-3. `feat: implement ticket search and redis caching`
-4. `feat: implement transactional reservation and expiration flow`
-5. `feat: implement payment cancellation and refund workflow`
-6. `feat: implement reports and admin endpoints`
-7. `test: add integration and concurrency tests`
-8. `docs: add postman openapi and phase three documentation`
+فاز سوم روی Branch مستقل `phase-3-backend` و در پنج Commit معنادار شامل
+راه‌اندازی، احراز هویت و جستجو، رزرو و پرداخت، مدیریت پشتیبان، و تست و مستندات
+ثبت شده است.
