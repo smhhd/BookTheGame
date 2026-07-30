@@ -6,24 +6,86 @@
   "variable": [
     {"key": "baseUrl", "value": "http://localhost:3000"},
     {"key": "token", "value": ""},
+    {"key": "supportToken", "value": ""},
+    {"key": "otp", "value": ""},
+    {"key": "testEmail", "value": ""},
+    {"key": "phase3ResponseLog", "value": "{}"},
     {"key": "ticketId", "value": "4"},
     {"key": "reservationId", "value": "19"},
     {"key": "reportId", "value": "1"}
   ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.info.requestName === 'Health') {",
+          "  pm.collectionVariables.set('phase3ResponseLog', '{}');",
+          "  pm.collectionVariables.set('testEmail', `phase3+${Date.now()}@example.com`);",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Response is JSON', function () {",
+          "  pm.expect(pm.response.headers.get('Content-Type') || '').to.include('application/json');",
+          "});",
+          "let body = null;",
+          "try { body = pm.response.json(); } catch (_error) {}",
+          "pm.test('Standard response envelope', function () {",
+          "  pm.expect(body).to.be.an('object');",
+          "  pm.expect(body).to.have.property('success');",
+          "  pm.expect(body).to.have.property('message');",
+          "  pm.expect(body.data !== undefined || body.error !== undefined).to.equal(true);",
+          "});",
+          "pm.test('No unhandled server error', function () {",
+          "  pm.expect(pm.response.code).to.be.below(500);",
+          "});",
+          "const redact = function (value) {",
+          "  if (Array.isArray(value)) return value.map(redact);",
+          "  if (!value || typeof value !== 'object') return value;",
+          "  return Object.keys(value).reduce(function (safe, key) {",
+          "    safe[key] = ['token', 'devOtp'].includes(key) ? '<redacted>' : redact(value[key]);",
+          "    return safe;",
+          "  }, {});",
+          "};",
+          "let log = {};",
+          "try { log = JSON.parse(pm.collectionVariables.get('phase3ResponseLog') || '{}'); } catch (_error) {}",
+          "log[pm.info.requestName] = {",
+          "  method: pm.request.method,",
+          "  url: pm.request.url.toString(),",
+          "  status: pm.response.code,",
+          "  response: redact(body)",
+          "};",
+          "pm.collectionVariables.set('phase3ResponseLog', JSON.stringify(log, null, 2));"
+        ]
+      }
+    }
+  ],
   "item": [
+    {"name": "Health", "request": {"method": "GET", "url": "{{baseUrl}}/health"}},
     {
       "name": "Auth",
       "item": [
         {
           "name": "Signup",
           "event": [{"listen": "test", "script": {"exec": ["const j=pm.response.json(); if(j.data&&j.data.token) pm.collectionVariables.set('token',j.data.token);"]}}],
-          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"firstName\":\"Test\",\"lastName\":\"User\",\"email\":\"phase3@example.com\",\"phone\":\"09121111111\",\"password\":\"StrongPass123\",\"cityId\":1}"}, "url": "{{baseUrl}}/api/auth/signup"}
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"firstName\":\"Test\",\"lastName\":\"User\",\"email\":\"{{testEmail}}\",\"password\":\"StrongPass123\",\"cityId\":1}"}, "url": "{{baseUrl}}/api/auth/signup"}
         },
-        {"name": "OTP Request", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"identifier\":\"phase3@example.com\"}"}, "url": "{{baseUrl}}/api/auth/otp/request"}},
+        {
+          "name": "OTP Request",
+          "event": [{"listen": "test", "script": {"exec": ["const j=pm.response.json(); if(j.data&&j.data.devOtp) pm.collectionVariables.set('otp',j.data.devOtp);"]}}],
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"identifier\":\"{{testEmail}}\"}"}, "url": "{{baseUrl}}/api/auth/otp/request"}
+        },
         {
           "name": "OTP Verify",
           "event": [{"listen": "test", "script": {"exec": ["const j=pm.response.json(); if(j.data&&j.data.token) pm.collectionVariables.set('token',j.data.token);"]}}],
-          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"identifier\":\"phase3@example.com\",\"otp\":\"000000\"}"}, "url": "{{baseUrl}}/api/auth/otp/verify"}
+          "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"identifier\":\"{{testEmail}}\",\"otp\":\"{{otp}}\"}"}, "url": "{{baseUrl}}/api/auth/otp/verify"}
         }
       ]
     },
@@ -54,14 +116,14 @@
       "item": [
         {"name": "Create Report", "request": {"method": "POST", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]}, "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"categoryId\":1,\"description\":\"Payment receipt was delayed\",\"reservationId\":{{reservationId}}}"}, "url": "{{baseUrl}}/api/reports"}},
         {"name": "My Reports", "request": {"method": "GET", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]}, "url": "{{baseUrl}}/api/reports/my"}},
-        {"name": "Admin Reports", "request": {"method": "GET", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]}, "url": "{{baseUrl}}/api/admin/reports?page=1&limit=20"}},
-        {"name": "Admin Report Details", "request": {"method": "GET", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]}, "url": "{{baseUrl}}/api/admin/reports/{{reportId}}"}},
-        {"name": "Admin Report Status", "request": {"method": "PATCH", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]}, "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"status\":\"reviewed\",\"response\":\"The issue was reviewed by support.\"}"}, "url": "{{baseUrl}}/api/admin/reports/{{reportId}}/status"}},
-        {"name": "Admin Reservations", "request": {"method": "GET", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]}, "url": "{{baseUrl}}/api/admin/reservations?page=1&limit=20"}},
-        {"name": "Admin Reservation Details", "request": {"method": "GET", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]}, "url": "{{baseUrl}}/api/admin/reservations/{{reservationId}}"}},
-        {"name": "Admin Reservation Status", "request": {"method": "PATCH", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]}, "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"status\":\"cancelled\"}"}, "url": "{{baseUrl}}/api/admin/reservations/{{reservationId}}/status"}},
-        {"name": "Admin Reservation Ticket", "request": {"method": "PATCH", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]}, "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"ticketId\":{{ticketId}}}"}, "url": "{{baseUrl}}/api/admin/reservations/{{reservationId}}/ticket"}},
-        {"name": "Suspicious Payments", "request": {"method": "GET", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]}, "url": "{{baseUrl}}/api/admin/payments/suspicious"}}
+        {"name": "Admin Reports", "request": {"method": "GET", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{supportToken}}", "type": "string"}]}, "url": "{{baseUrl}}/api/admin/reports?page=1&limit=20"}},
+        {"name": "Admin Report Details", "request": {"method": "GET", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{supportToken}}", "type": "string"}]}, "url": "{{baseUrl}}/api/admin/reports/{{reportId}}"}},
+        {"name": "Admin Report Status", "request": {"method": "PATCH", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{supportToken}}", "type": "string"}]}, "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"status\":\"reviewed\",\"response\":\"The issue was reviewed by support.\"}"}, "url": "{{baseUrl}}/api/admin/reports/{{reportId}}/status"}},
+        {"name": "Admin Reservations", "request": {"method": "GET", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{supportToken}}", "type": "string"}]}, "url": "{{baseUrl}}/api/admin/reservations?page=1&limit=20"}},
+        {"name": "Admin Reservation Details", "request": {"method": "GET", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{supportToken}}", "type": "string"}]}, "url": "{{baseUrl}}/api/admin/reservations/{{reservationId}}"}},
+        {"name": "Admin Reservation Status", "request": {"method": "PATCH", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{supportToken}}", "type": "string"}]}, "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"status\":\"cancelled\"}"}, "url": "{{baseUrl}}/api/admin/reservations/{{reservationId}}/status"}},
+        {"name": "Admin Reservation Ticket", "request": {"method": "PATCH", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{supportToken}}", "type": "string"}]}, "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"ticketId\":{{ticketId}}}"}, "url": "{{baseUrl}}/api/admin/reservations/{{reservationId}}/ticket"}},
+        {"name": "Suspicious Payments", "request": {"method": "GET", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{supportToken}}", "type": "string"}]}, "url": "{{baseUrl}}/api/admin/payments/suspicious"}}
       ]
     }
   ]

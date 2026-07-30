@@ -103,56 +103,49 @@ Compose در اولین ساخت Volume، Schema، Index، Sample، Function و 
 به ترتیب اجرا می‌کند. برای بازسازی کامل دادهٔ نمونه باید Volume PostgreSQL را
 با آگاهی از حذف داده پاک کنید.
 
-## Endpointها
+## Endpointها، ورودی‌ها و خروجی‌ها
 
-| Method | Route | دسترسی | مسئولیت |
-|---|---|---|---|
-| POST | `/api/auth/signup` | عمومی | ثبت‌نام و JWT |
-| POST | `/api/auth/otp/request` | عمومی | ساخت و ارسال آزمایشی OTP |
-| POST | `/api/auth/otp/verify` | عمومی | بررسی OTP و JWT |
-| GET/PATCH | `/api/users/me` | کاربر | پروفایل جاری |
-| GET | `/api/cities` | عمومی | شهرها |
-| GET | `/api/venues?cityId=` | عمومی | محل‌ها |
-| GET | `/api/tickets` | عمومی | جستجو |
-| GET | `/api/tickets/:ticketId` | عمومی | جزئیات |
-| POST | `/api/reservations` | کاربر | رزرو موقت صندلی‌ها |
-| GET | `/api/reservations/active` | کاربر | رزرو فعال |
-| GET | `/api/reservations/history` | کاربر | تاریخچه |
-| POST | `/api/payments` | کاربر | پرداخت محلی سفارش |
-| GET | `/api/reservations/:reservationId/cancellation-penalty` | مالک/پشتیبان | پیش‌نمایش جریمه |
-| POST | `/api/reservations/:reservationId/cancel` | مالک/پشتیبان | کنسلی و Refund |
-| POST | `/api/reports` | کاربر | گزارش مشکل |
-| GET | `/api/reports/my` | کاربر | گزارش‌های من و پاسخ پشتیبان |
-| GET | `/api/admin/reports` | پشتیبان | فهرست گزارش‌ها |
-| GET | `/api/admin/reports/:id` | پشتیبان | جزئیات گزارش |
-| PATCH | `/api/admin/reports/:id/status` | پشتیبان | وضعیت گزارش |
-| GET | `/api/admin/reservations` | پشتیبان | فهرست رزروها |
-| GET | `/api/admin/reservations/:id` | پشتیبان | جزئیات رزرو |
-| PATCH | `/api/admin/reservations/:id/status` | پشتیبان | وضعیت رزرو |
-| PATCH | `/api/admin/reservations/:id/ticket` | پشتیبان | تغییر بلیت رزرو pending |
-| GET | `/api/admin/payments/suspicious` | پشتیبان | پرداخت مشکوک |
+همه مسیرهای محافظت‌شده Header از نوع `Authorization: Bearer <token>` می‌خواهند.
+در جدول زیر، «خروجی» محتوای فیلد `data` در قالب پاسخ استاندارد است؛ علامت `?`
+یعنی پارامتر اختیاری است.
 
-فیلترهای Tickets: `sportTypeId`, `homeTeamId`, `awayTeamId`, `cityId`,
-`venueId`, `categoryId`, `startDate`, `endDate`, `minPrice`, `maxPrice`,
-`remainingOnly`, `sortBy`, `sortOrder`, `page`, `limit`. تاریخ‌ها باید ISO-8601
-همراه offset باشند. Sortهای مجاز: `matchDate`, `price`, `createdAt`,
-`ticketId`.
+| Method و Route | دسترسی | ورودی | خروجی `data` | موفقیت |
+|---|---|---|---|---|
+| `GET /health` | عمومی | ندارد | `{}` | `200` |
+| `POST /api/auth/signup` | عمومی | Body: `firstName`, `lastName`, `password` و حداقل یکی از `email`/`phone`؛ `cityId?` | `user` عمومی بدون هش رمز، `token` | `201` |
+| `POST /api/auth/otp/request` | عمومی | Body: `identifier` (ایمیل یا تلفن) | `expiresInSeconds` و فقط در محیط مجاز `devOtp` | `200` |
+| `POST /api/auth/otp/verify` | عمومی | Body: `identifier`, `otp` شش‌رقمی | `user` عمومی، `token` | `200` |
+| `GET /api/users/me` | کاربر | ندارد | پروفایل شامل شناسه، نقش، تماس، شهر، تصویر، تولد، کیف پول و وضعیت | `200` |
+| `PATCH /api/users/me` | کاربر | Body: حداقل یکی از `firstName`, `lastName`, `email`, `phone`, `cityId`, `profileImageUrl`, `birthDate` | پروفایل به‌روزشده | `200` |
+| `GET /api/cities` | عمومی | ندارد | `items[]` شامل `city_id`, `name`, `province_id`, `province_name` و `cacheHit` | `200` |
+| `GET /api/venues` | عمومی | Query: `cityId?` | `items[]` شامل شناسه، شهر، نام، آدرس و نوع محل؛ `cacheHit` | `200` |
+| `GET /api/tickets` | عمومی | Queryهای جستجو و صفحه‌بندیِ زیر جدول | `items[]` بلیت‌ها، `pagination` و در Development مقدار `cacheHit` | `200` |
+| `GET /api/tickets/:ticketId` | عمومی | Path: `ticketId` | مشخصات بلیت، مسابقه، تیم‌ها، محل، صندلی، امکانات، ظرفیت و `sportSpecificDetails` | `200` |
+| `POST /api/reservations` | کاربر | Body: `ticketIds` یکتا (۱ تا ۱۰ شناسه) | `orderId`, `reservedUntil`, `reservations[]`, `updatedTicketCount` | `201` |
+| `GET /api/reservations/active` | کاربر | ندارد | آرایه رزروهای pending و منقضی‌نشده با بلیت، مسابقه و صندلی | `200` |
+| `GET /api/reservations/history` | کاربر | Query: `status?`, `page?`, `limit?` | `items[]` تاریخچه و `pagination` | `200` |
+| `POST /api/payments` | کاربر | Body: `reservationId`, `method`؛ `simulateStatus?` | رکورد پرداخت شامل شناسه‌ها، مبلغ، روش، وضعیت، زمان و کد تراکنش | `201` |
+| `GET /api/reservations/:reservationId/cancellation-penalty` | مالک/پشتیبان | Path: `reservationId` | مبلغ اصلی، درصد/مبلغ جریمه، مبلغ قابل استرداد و شناسه Policy/Rule | `200` |
+| `POST /api/reservations/:reservationId/cancel` | مالک/پشتیبان | Path: `reservationId`؛ Body: `reason?` | `requestId`, `penalty`, `refund` و `alreadyCancelled` | `200` |
+| `POST /api/reports` | کاربر | Body: `categoryId`, `description` و دقیقاً یکی از `ticketId`/`reservationId`/`paymentId` | `report_id`, `status`, `created_at` | `201` |
+| `GET /api/reports/my` | کاربر | ندارد | آرایه گزارش‌ها، موضوع، دسته، وضعیت و پاسخ پشتیبان | `200` |
+| `GET /api/admin/reports` | پشتیبان | Query: `status?`, `page?`, `limit?` | `items[]` گزارش‌ها و اطلاعات کاربر، `pagination` | `200` |
+| `GET /api/admin/reports/:id` | پشتیبان | Path: `id` | جزئیات کامل گزارش، دسته و اطلاعات کاربر | `200` |
+| `PATCH /api/admin/reports/:id/status` | پشتیبان | Path: `id`؛ Body: `status`, `response?` | گزارش به‌روزشده و اطلاعات بررسی | `200` |
+| `GET /api/admin/reservations` | پشتیبان | Query: `status?`, `page?`, `limit?` | `items[]` رزروها و اطلاعات کاربر/مسابقه، `pagination` | `200` |
+| `GET /api/admin/reservations/:id` | پشتیبان | Path: `id` | جزئیات رزرو، بلیت، مسابقه، محل و پرداخت | `200` |
+| `PATCH /api/admin/reservations/:id/status` | پشتیبان | Path: `id`؛ Body: `status` از `paid`, `cancelled`, `expired` | نتیجه تغییر وضعیت؛ در کنسلی شامل جریمه و Refund | `200` |
+| `PATCH /api/admin/reservations/:id/ticket` | پشتیبان | Path: `id`؛ Body: `ticketId` از همان مسابقه | شناسه رزرو، بلیت قبلی/جدید، قیمت، وضعیت و بررسی‌کننده | `200` |
+| `GET /api/admin/payments/suspicious` | پشتیبان | ندارد | آرایه پرداخت‌های مشکوک با مبلغ مورد انتظار، تعداد تلاش و `reasons[]` | `200` |
 
-بدنه‌های مهم:
-
-| Endpoint | Body |
-|---|---|
-| `POST /api/auth/signup` | `firstName`, `lastName`, `email` یا `phone`, `password`, `cityId?` |
-| `POST /api/auth/otp/request` | `identifier` |
-| `POST /api/auth/otp/verify` | `identifier`, `otp` شش‌رقمی |
-| `PATCH /api/users/me` | حداقل یکی از فیلدهای پروفایل |
-| `POST /api/reservations` | `ticketIds` یکتا، حداکثر ۱۰ مورد |
-| `POST /api/payments` | `reservationId`, `method`, `simulateStatus?` |
-| `POST /api/reservations/:reservationId/cancel` | `reason?` |
-| `POST /api/reports` | `categoryId`, `description` و دقیقاً یکی از `ticketId`، `reservationId` یا `paymentId` |
-| `PATCH /api/admin/reports/:id/status` | `status`, `response?` |
-| `PATCH /api/admin/reservations/:id/status` | `status` |
-| `PATCH /api/admin/reservations/:id/ticket` | `ticketId` از همان مسابقه |
+Query جستجوی بلیت: `sportTypeId?`, `homeTeamId?`, `awayTeamId?`, `cityId?`,
+`venueId?`, `categoryId?`, `startDate?`, `endDate?`, `minPrice?`, `maxPrice?`,
+`remainingOnly?` (پیش‌فرض `true`)، `sortBy?`, `sortOrder?`, `page?`, `limit?`.
+تاریخ‌ها ISO-8601 همراه offset هستند؛ `sortBy` یکی از `matchDate`, `price`,
+`createdAt`, `ticketId` و `sortOrder` یکی از `asc`, `desc` است. `status` تاریخچه
+و رزرو ادمین یکی از `pending`, `paid`, `cancelled`, `expired` و `status` گزارش
+یکی از `pending`, `reviewed`, `rejected` است. صفحه‌بندی به‌طور پیش‌فرض
+`page=1&limit=20` و حداکثر `limit=100` دارد.
 
 نمونه:
 
@@ -240,9 +233,19 @@ Script دو Promise هم‌زمان می‌فرستد و سپس Assert می‌ک
 ## Postman
 
 `postman/BookTheGame.postman_collection.json` را Import و `baseUrl` را تنظیم
-کنید. اسکریپت Signup/OTP Verify توکن پاسخ را خودکار در متغیر `token` ذخیره
-می‌کند. برای درخواست‌های `/api/admin` مقدار `token` باید با JWT یک کاربر
-`support` جایگزین شود. شناسه‌های نمونه نیز باید با دیتابیس هماهنگ شوند.
+کنید. Collection Runner را از اولین درخواست (`Health`) اجرا کنید. ایمیل تست
+یکتا ساخته می‌شود، OTP آزمایشی و JWT به‌صورت خودکار بین درخواست‌ها انتقال
+می‌یابند و سه Assertion عمومی برای JSON بودن، قالب استاندارد پاسخ و نبود خطای
+پردازش‌نشدهٔ `5xx` روی تک‌تک درخواست‌ها اجرا می‌شود.
+
+Response واقعی همه درخواست‌های اجراشده، همراه Method، URL و Status، در متغیر
+Collection به نام `phase3ResponseLog` ثبت می‌شود؛ مقادیر حساس `token` و
+`devOtp` در این گزارش با `<redacted>` جایگزین می‌شوند. پس از Run، این متغیر را
+از تب Variables می‌توان مشاهده یا همراه Collection خروجی گرفت. برای مسیرهای
+`/api/admin` ابتدا متغیر `supportToken` را با JWT یک کاربر `support` پر کنید و
+شناسه‌های `ticketId`، `reservationId` و `reportId` را با دادهٔ جاری هماهنگ
+کنید. دریافت پاسخ خطای کنترل‌شده (مانند `4xx`) نیز ثبت می‌شود، اما برای سناریوی
+موفق باید پیش‌شرط دادهٔ همان درخواست برقرار باشد.
 
 ## محدودیت‌ها و فاز چهارم
 
