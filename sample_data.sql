@@ -125,16 +125,16 @@ INSERT INTO competitions (competition_id, sport_type_id, name) VALUES
 (10, 7, 'Wrestling Grand Prix');
 
 INSERT INTO matches (match_id, sport_type_id, competition_id, organizer_id, home_team_id, away_team_id, venue_id, match_datetime, status) VALUES
-(1, 1, 1, 1, 1, 2, 1, '2026-07-05 19:00:00', 'scheduled'),
-(2, 1, 1, 2, 3, 4, 3, '2026-07-08 20:00:00', 'scheduled'),
-(3, 2, 3, 4, 5, 6, 5, '2026-07-10 18:00:00', 'scheduled'),
-(4, 2, 4, 7, 7, 8, 8, '2026-07-12 17:00:00', 'scheduled'),
-(5, 3, 5, 1, 9, 10, 2, '2026-07-15 19:30:00', 'scheduled'),
-(6, 3, 6, 6, 11, 12, 7, '2026-07-18 18:30:00', 'scheduled'),
-(7, 4, 7, 4, 13, 14, 5, '2026-07-20 16:00:00', 'scheduled'),
-(8, 5, 8, 5, 15, 16, 6, '2026-07-22 17:30:00', 'scheduled'),
-(9, 6, 9, 2, 17, 18, 3, '2026-07-24 10:00:00', 'scheduled'),
-(10, 7, 10, 8, 19, 20, 10, '2026-07-26 11:00:00', 'scheduled');
+(1, 1, 1, 1, 1, 2, 1, CURRENT_TIMESTAMP + INTERVAL '7 days', 'scheduled'),
+(2, 1, 1, 2, 3, 4, 3, CURRENT_TIMESTAMP + INTERVAL '10 days', 'scheduled'),
+(3, 2, 3, 4, 5, 6, 5, CURRENT_TIMESTAMP + INTERVAL '13 days', 'scheduled'),
+(4, 2, 4, 7, 7, 8, 8, CURRENT_TIMESTAMP + INTERVAL '16 days', 'scheduled'),
+(5, 3, 5, 1, 9, 10, 2, CURRENT_TIMESTAMP + INTERVAL '19 days', 'scheduled'),
+(6, 3, 6, 6, 11, 12, 7, CURRENT_TIMESTAMP + INTERVAL '22 days', 'scheduled'),
+(7, 4, 7, 4, 13, 14, 5, CURRENT_TIMESTAMP + INTERVAL '25 days', 'scheduled'),
+(8, 5, 8, 5, 15, 16, 6, CURRENT_TIMESTAMP + INTERVAL '28 days', 'scheduled'),
+(9, 6, 9, 2, 17, 18, 3, CURRENT_TIMESTAMP + INTERVAL '31 days', 'scheduled'),
+(10, 7, 10, 8, 19, 20, 10, CURRENT_TIMESTAMP + INTERVAL '34 days', 'scheduled');
 
 INSERT INTO ticket_categories (category_id, name, description) VALUES
 (1, 'Normal', 'Regular ticket category'),
