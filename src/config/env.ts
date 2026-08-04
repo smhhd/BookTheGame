@@ -12,6 +12,16 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
   REDIS_URL: z.string().min(1),
+  ELASTICSEARCH_NODE: z.string().url().default("http://localhost:9200"),
+  ELASTICSEARCH_USERNAME: z.string().optional(),
+  ELASTICSEARCH_PASSWORD: z.string().optional(),
+  ELASTICSEARCH_INDEX: z.string().regex(/^[a-z0-9_-]+$/).default("book_the_game_tickets_v1"),
+  ELASTICSEARCH_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(100).max(30000).default(2000),
+  ELASTICSEARCH_REINDEX_BATCH_SIZE: z.coerce.number().int().min(1).max(5000).default(500),
+  SEARCH_FALLBACK_TO_POSTGRES: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default("1h"),
   OTP_HASH_SECRET: z.string().min(32),
