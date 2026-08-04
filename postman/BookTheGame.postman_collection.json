@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "Book The Game - Phase 3",
+    "name": "Book The Game - Phase 4",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -9,7 +9,7 @@
     {"key": "supportToken", "value": ""},
     {"key": "otp", "value": ""},
     {"key": "testEmail", "value": ""},
-    {"key": "phase3ResponseLog", "value": "{}"},
+    {"key": "phase4ResponseLog", "value": "{}"},
     {"key": "ticketId", "value": "4"},
     {"key": "reservationId", "value": "19"},
     {"key": "reportId", "value": "1"}
@@ -21,8 +21,8 @@
         "type": "text/javascript",
         "exec": [
           "if (pm.info.requestName === 'Health') {",
-          "  pm.collectionVariables.set('phase3ResponseLog', '{}');",
-          "  pm.collectionVariables.set('testEmail', `phase3+${Date.now()}@example.com`);",
+          "  pm.collectionVariables.set('phase4ResponseLog', '{}');",
+          "  pm.collectionVariables.set('testEmail', `phase4+${Date.now()}@example.com`);",
           "}"
         ]
       }
@@ -55,20 +55,21 @@
           "  }, {});",
           "};",
           "let log = {};",
-          "try { log = JSON.parse(pm.collectionVariables.get('phase3ResponseLog') || '{}'); } catch (_error) {}",
+          "try { log = JSON.parse(pm.collectionVariables.get('phase4ResponseLog') || '{}'); } catch (_error) {}",
           "log[pm.info.requestName] = {",
           "  method: pm.request.method,",
           "  url: pm.request.url.toString(),",
           "  status: pm.response.code,",
           "  response: redact(body)",
           "};",
-          "pm.collectionVariables.set('phase3ResponseLog', JSON.stringify(log, null, 2));"
+          "pm.collectionVariables.set('phase4ResponseLog', JSON.stringify(log, null, 2));"
         ]
       }
     }
   ],
   "item": [
     {"name": "Health", "request": {"method": "GET", "url": "{{baseUrl}}/health"}},
+    {"name": "Search Health", "request": {"method": "GET", "url": "{{baseUrl}}/health/search"}},
     {
       "name": "Auth",
       "item": [
@@ -101,7 +102,7 @@
     {
       "name": "Tickets and Purchase",
       "item": [
-        {"name": "Search Tickets", "request": {"method": "GET", "url": "{{baseUrl}}/api/tickets?remainingOnly=true&sortBy=price&page=1&limit=20"}},
+        {"name": "Search Tickets", "request": {"method": "GET", "url": "{{baseUrl}}/api/tickets?q=Football&remainingOnly=true&sortBy=matchDate&page=1&limit=20"}},
         {"name": "Ticket Details", "request": {"method": "GET", "url": "{{baseUrl}}/api/tickets/{{ticketId}}"}},
         {"name": "Reserve", "request": {"method": "POST", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]}, "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"ticketIds\":[{{ticketId}}]}"}, "url": "{{baseUrl}}/api/reservations"}},
         {"name": "Active", "request": {"method": "GET", "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]}, "url": "{{baseUrl}}/api/reservations/active"}},

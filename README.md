@@ -1,15 +1,28 @@
-# Book The Game — Phase 3 Backend
+# Book The Game — Phase 4
 
-بک‌اند REST سامانه رزرو بلیط مسابقات ورزشی با Node.js، TypeScript،
-Express، PostgreSQL و Redis. تمام SQLها مستقیم و پارامتری هستند و هیچ ORM
-استفاده نشده است.
+سامانه کامل رزرو بلیط مسابقات ورزشی شامل Backend با Node.js/TypeScript،
+PostgreSQL، Redis و Elasticsearch و Frontend فارسی React. تمام SQLها مستقیم و
+پارامتری هستند و هیچ ORM استفاده نشده است.
+
+## معماری فاز چهارم
+
+```text
+React Frontend → Express API → PostgreSQL (منبع حقیقت)
+                         ├──→ Redis (OTP و Cache)
+                         └──→ Elasticsearch 8.19 (فقط جستجو)
+```
+
+هر Document جستجو نماینده یک بلیت و `_id` آن برابر `ticket_id` است. جزئیات
+معماری در [`docs/phase4-architecture.md`](docs/phase4-architecture.md)، Contract
+API در [`docs/phase4-api.md`](docs/phase4-api.md) و سناریوهای دستی در
+[`docs/phase4-test-scenarios.md`](docs/phase4-test-scenarios.md) قرار دارد.
 
 ## فناوری و معماری
 
 لایه‌ها در `src/routes`، `controllers`، `services` و `repositories` جدا هستند.
 Validation با Zod، احراز هویت با JWT، هش رمز با bcryptjs، امنیت HTTP با Helmet
 و محدودسازی Auth با express-rate-limit انجام می‌شود. Redis فقط برای OTP و
-Cache-Aside استفاده می‌شود. خطاهای عملیاتی Cache باعث شکست عملیات اصلی
+Cache-Aside و Elasticsearch فقط برای جستجو استفاده می‌شود. خطاهای عملیاتی Cache باعث شکست عملیات اصلی
 PostgreSQL نمی‌شوند؛ بااین‌حال OTP به Redis وابسته است و اتصال اولیه Redis طبق
 سیاست reconnect کلاینت تا زمان برقراری دوباره تلاش می‌شود.
 
@@ -43,13 +56,19 @@ tests/
   unit/ integration/ concurrency/
 sql/migrations/
 postman/
+frontend/
+docs/
 ```
 
 ## پیش‌نیاز و نصب محلی
 
-Node.js 20+، PostgreSQL 14+ با extension `btree_gist` و Redis 7+ لازم است.
+Node.js 20+، PostgreSQL 14+ با extension `btree_gist`، Redis 7+ و Elasticsearch
+8.19 لازم است. برای اجرای یک‌دست همه سرویس‌ها Docker پیشنهاد می‌شود.
 
 ```bash
+npm install
+copy .env.example .env
+cd frontend
 npm install
 copy .env.example .env
 ```
@@ -77,10 +96,12 @@ password_hash است.
 
 ## اجرا
 
-PostgreSQL و Redis را اجرا کنید، سپس:
+PostgreSQL، Redis و Elasticsearch را اجرا کنید، سپس در دو Terminal:
 
 ```bash
+npm run search:reindex
 npm run dev
+npm run dev:frontend
 npm run build
 npm start
 ```
@@ -91,7 +112,34 @@ Job انقضا همراه سرور اجرا می‌شود. اجرای یک Batch
 npm run job:expire
 ```
 
-Swagger در `http://localhost:3000/api/docs` و Health در `/health` است.
+Frontend روی `http://localhost:5173`، Swagger روی `http://localhost:3000/api/docs`،
+Health عمومی روی `/health` و Health جستجو/Sync روی `/health/search` است.
+
+### Elasticsearch
+
+متغیرهای اتصال، Credential اختیاری، نام Index، Timeout، Batch Size و Fallback
+در `.env.example` تعریف شده‌اند.
+
+```bash
+npm run search:create-index
+npm run search:reindex
+npm run search:rebuild
+```
+
+دستور اول Index را در صورت نبود می‌سازد، دومی Bulk upsert بدون Document تکراری
+و سومی حذف، ساخت Mapping و Reindex کامل را انجام می‌دهد. معادل تولیدی دستورها
+پسوند `:prod` دارد.
+
+### Frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+Client مرکزی از `VITE_API_BASE_URL` و `VITE_API_TIMEOUT_MS` استفاده می‌کند.
+صفحات جستجو، جزئیات، ثبت‌نام/OTP، رزرو، پرداخت، تاریخچه/کنسلی، پروفایل، گزارش،
+پنل پشتیبان و 404 پیاده‌سازی شده‌اند.
 
 ## Docker
 
@@ -100,8 +148,10 @@ docker compose up --build
 ```
 
 Compose در اولین ساخت Volume، Schema، Index، Sample، Function و Migration را
-به ترتیب اجرا می‌کند. برای بازسازی کامل دادهٔ نمونه باید Volume PostgreSQL را
-با آگاهی از حذف داده پاک کنید.
+اجرا می‌کند، سپس Elasticsearch را آماده، Reindex را اجرا و Backend و Frontend
+را بالا می‌آورد. تاریخ مسابقات Seed نسبت به زمان ایجاد دیتابیس در آینده است.
+برای بازسازی کامل داده نمونه باید Volume PostgreSQL را با آگاهی از حذف داده پاک
+کنید.
 
 ## Endpointها، ورودی‌ها و خروجی‌ها
 
@@ -112,6 +162,7 @@ Compose در اولین ساخت Volume، Schema، Index، Sample، Function و 
 | Method و Route | دسترسی | ورودی | خروجی `data` | موفقیت |
 |---|---|---|---|---|
 | `GET /health` | عمومی | ندارد | `{}` | `200` |
+| `GET /health/search` | عمومی | ندارد | سلامت Elastic و صف Sync معوق | `200` |
 | `POST /api/auth/signup` | عمومی | Body: `firstName`, `lastName`, `password` و حداقل یکی از `email`/`phone`؛ `cityId?` | `user` عمومی بدون هش رمز، `token` | `201` |
 | `POST /api/auth/otp/request` | عمومی | Body: `identifier` (ایمیل یا تلفن) | `expiresInSeconds` و فقط در محیط مجاز `devOtp` | `200` |
 | `POST /api/auth/otp/verify` | عمومی | Body: `identifier`, `otp` شش‌رقمی | `user` عمومی، `token` | `200` |
@@ -138,11 +189,12 @@ Compose در اولین ساخت Volume، Schema، Index، Sample، Function و 
 | `PATCH /api/admin/reservations/:id/ticket` | پشتیبان | Path: `id`؛ Body: `ticketId` از همان مسابقه | شناسه رزرو، بلیت قبلی/جدید، قیمت، وضعیت و بررسی‌کننده | `200` |
 | `GET /api/admin/payments/suspicious` | پشتیبان | ندارد | آرایه پرداخت‌های مشکوک با مبلغ مورد انتظار، تعداد تلاش و `reasons[]` | `200` |
 
-Query جستجوی بلیت: `sportTypeId?`, `homeTeamId?`, `awayTeamId?`, `cityId?`,
-`venueId?`, `categoryId?`, `startDate?`, `endDate?`, `minPrice?`, `maxPrice?`,
-`remainingOnly?` (پیش‌فرض `true`)، `sortBy?`, `sortOrder?`, `page?`, `limit?`.
+Query جستجوی بلیت: `q?`, `team?`, `sport?`, `sportTypeId?`, `homeTeamId?`, `awayTeamId?`,
+`cityId?`, `venueId?`, `categoryId?`, `status?`, `facility?`, `startDate?`,
+`endDate?`, `minPrice?`, `maxPrice?`, `remainingOnly?` (پیش‌فرض `true`)،
+`sortBy?`, `sortOrder?`, `page?`, `limit?`.
 تاریخ‌ها ISO-8601 همراه offset هستند؛ `sortBy` یکی از `matchDate`, `price`,
-`createdAt`, `ticketId` و `sortOrder` یکی از `asc`, `desc` است. `status` تاریخچه
+`createdAt`, `ticketId`, `relevance` و `sortOrder` یکی از `asc`, `desc` است. `status` تاریخچه
 و رزرو ادمین یکی از `pending`, `paid`, `cancelled`, `expired` و `status` گزارش
 یکی از `pending`, `reviewed`, `rejected` است. صفحه‌بندی به‌طور پیش‌فرض
 `page=1&limit=20` و حداکثر `limit=100` دارد.
@@ -196,7 +248,7 @@ Authorization: Bearer <token>
 یکسان قفل می‌کنند. Job از `FOR UPDATE SKIP LOCKED` و Batch محدود استفاده
 می‌کند و فقط وضعیت pending را آزاد می‌کند، پس اجرای دوباره امن است.
 
-## Cache
+## Cache و Sync جستجو
 
 Cities، Venues، Profile، Search و Ticket Details با Cache-Aside و TTLهای Environment
 کش می‌شوند. کلید Search از JSON مرتب‌شده و SHA-256 ساخته می‌شود. هر تغییر
@@ -205,17 +257,27 @@ Cities، Venues، Profile، Search و Ticket Details با Cache-Aside و TTLها
 `password_hash` کش می‌شود و پس از ویرایش پروفایل، پرداخت کیف پول یا Refund
 کلید آن حذف می‌گردد.
 
+پس از Commit رزرو، پرداخت، کنسلی، انقضا یا تغییر پشتیبان، Document بلیت Sync و
+سپس نسخه Cache افزایش می‌یابد. شکست Sync عملیات PostgreSQL را خراب نمی‌کند؛ ID
+در صف حافظه ثبت، هر دقیقه Retry و در `/health/search` نمایش داده می‌شود. پس از
+Restart در وضعیت خطا، `npm run search:reindex` مسیر بازیابی قطعی است.
+
 ## تست
 
 ```bash
 npm run typecheck
 npm test
 npm run test:integration
+npm run build
+cd frontend && npm run typecheck
+cd frontend && npm test
+cd frontend && npm run build
 ```
 
-در وضعیت فعلی ۷ Suite و ۱۷ تست خودکار وجود دارد؛ تست‌های رگرسیون پرداخت کیف
-پول، پاک‌سازی Cache پس از Refund، پاسخ پشتیبان و تغییر بلیت رزرو را نیز پوشش
-می‌دهند.
+۱۲ Suite و ۲۸ تست Backend علاوه بر رگرسیون فاز سوم، Query/Mapping، Reindex
+دسته‌ای، Cache Hit/Miss و Fallback را پوشش می‌دهند. ۳ فایل و ۶ تست Frontend
+جستجو، فیلتر، حالت خالی، Route خصوصی/پشتیبان و جریان رزرو تا پرداخت را بررسی
+می‌کنند؛ سناریوهای تکمیلی دستی در مستند تست فاز چهارم آمده‌اند.
 
 تست همروندی واقعی نیازمند یک بلیط available برای مسابقه آینده است:
 
@@ -239,7 +301,7 @@ Script دو Promise هم‌زمان می‌فرستد و سپس Assert می‌ک
 پردازش‌نشدهٔ `5xx` روی تک‌تک درخواست‌ها اجرا می‌شود.
 
 Response واقعی همه درخواست‌های اجراشده، همراه Method، URL و Status، در متغیر
-Collection به نام `phase3ResponseLog` ثبت می‌شود؛ مقادیر حساس `token` و
+Collection به نام `phase4ResponseLog` ثبت می‌شود؛ مقادیر حساس `token` و
 `devOtp` در این گزارش با `<redacted>` جایگزین می‌شوند. پس از Run، این متغیر را
 از تب Variables می‌توان مشاهده یا همراه Collection خروجی گرفت. برای مسیرهای
 `/api/admin` ابتدا متغیر `supportToken` را با JWT یک کاربر `support` پر کنید و
@@ -247,7 +309,7 @@ Collection به نام `phase3ResponseLog` ثبت می‌شود؛ مقادیر �
 کنید. دریافت پاسخ خطای کنترل‌شده (مانند `4xx`) نیز ثبت می‌شود، اما برای سناریوی
 موفق باید پیش‌شرط دادهٔ همان درخواست برقرار باشد.
 
-## محدودیت‌ها و فاز چهارم
+## محدودیت‌ها
 
 - Email/SMS و درگاه بانکی Provider آزمایشی و قابل تعویض دارند.
 - در قطعی اولیه Redis، reconnect کلاینت ممکن است درخواست وابسته به Cache یا OTP
@@ -255,13 +317,12 @@ Collection به نام `phase3ResponseLog` ثبت می‌شود؛ مقادیر �
 - Schema برای ورزش‌های مختلف ستون اختصاصی جدا ندارد؛ پاسخ `sportSpecificDetails`
   فقط از اطلاعات واقعی صندلی، نوع محل و امکانات موجود ساخته می‌شود و داده‌ای
   حدس زده نمی‌شود.
-- Sample matchها تاریخ ثابت دارند و با گذشت زمان برای رزرو مناسب نیستند.
 - Audit Log پیشنهاد می‌شود اما چون جدول مناسب وجود نداشت اضافه نشده است.
-- Elasticsearch و UI عمداً مربوط به فاز چهارم‌اند. پیشنهاد بعدی Outbox برای
-  Sync مطمئن PostgreSQL/Elasticsearch و Autocomplete است.
+- صف Sync Elasticsearch درون‌حافظه‌ای است؛ برای تضمین تحویل Production، Outbox
+  پایدار پیشنهاد بعدی است. Reindex مسیر بازیابی فعلی است.
+- تغییر مستقیم جدول‌های قابل جستجو خارج از Backend نیازمند Reindex است.
 
 ## وضعیت Git
 
-فاز سوم روی Branch مستقل `phase-3-backend` و در پنج Commit معنادار شامل
-راه‌اندازی، احراز هویت و جستجو، رزرو و پرداخت، مدیریت پشتیبان، و تست و مستندات
-ثبت شده است.
+فاز چهارم روی Branch مستقل `phase-4-search-ui` و در Commitهای جداگانه زیرساخت
+Index، API و Sync، Frontend، Docker و مستندات ثبت شده است.

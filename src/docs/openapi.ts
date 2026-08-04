@@ -2,8 +2,8 @@ export const openapi = {
   openapi: "3.0.3",
   info: {
     title: "Book The Game API",
-    version: "3.0.0",
-    description: "Phase 3 API. Monetary values are returned in the database currency unit."
+    version: "4.0.0",
+    description: "Phase 4 API backed by PostgreSQL, Elasticsearch search and Redis cache. Monetary values use the database currency unit."
   },
   servers: [{ url: "http://localhost:3000" }],
   components: {
@@ -34,6 +34,12 @@ export const openapi = {
   },
   paths: {
     "/health": { get: { summary: "Health check", responses: { "200": { description: "OK" } } } },
+    "/health/search": {
+      get: {
+        summary: "Elasticsearch availability and deferred synchronization state",
+        responses: { "200": { description: "Search health snapshot" } }
+      }
+    },
     "/api/auth/signup": {
       post: {
         summary: "Register spectator",
@@ -53,7 +59,38 @@ export const openapi = {
     },
     "/api/cities": { get: { summary: "List cities", responses: { "200": { description: "OK" } } } },
     "/api/venues": { get: { summary: "List venues", responses: { "200": { description: "OK" } } } },
-    "/api/tickets": { get: { summary: "Search tickets", responses: { "200": { description: "OK" } } } },
+    "/api/tickets": {
+      get: {
+        summary: "Search tickets through Redis and Elasticsearch with PostgreSQL fallback",
+        parameters: [
+          { in: "query", name: "q", schema: { type: "string", maxLength: 200 }, description: "General text search" },
+          { in: "query", name: "team", schema: { type: "string", maxLength: 100 } },
+          { in: "query", name: "sport", schema: { type: "string", maxLength: 100 } },
+          { in: "query", name: "sportTypeId", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "homeTeamId", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "awayTeamId", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "cityId", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "venueId", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "categoryId", schema: { type: "integer", minimum: 1 } },
+          { in: "query", name: "status", schema: { type: "string", enum: ["available", "reserved", "sold", "cancelled"] } },
+          { in: "query", name: "facility", schema: { type: "string", maxLength: 100 } },
+          { in: "query", name: "startDate", schema: { type: "string", format: "date-time" } },
+          { in: "query", name: "endDate", schema: { type: "string", format: "date-time" } },
+          { in: "query", name: "minPrice", schema: { type: "number", minimum: 0 } },
+          { in: "query", name: "maxPrice", schema: { type: "number", minimum: 0 } },
+          { in: "query", name: "remainingOnly", schema: { type: "boolean", default: true } },
+          { in: "query", name: "sortBy", schema: { type: "string", enum: ["matchDate", "price", "createdAt", "ticketId", "relevance"], default: "matchDate" } },
+          { in: "query", name: "sortOrder", schema: { type: "string", enum: ["asc", "desc"], default: "asc" } },
+          { in: "query", name: "page", schema: { type: "integer", minimum: 1, default: 1 } },
+          { in: "query", name: "limit", schema: { type: "integer", minimum: 1, maximum: 100, default: 20 } }
+        ],
+        responses: {
+          "200": { description: "Paginated results with search.source and search.tookMs metadata" },
+          "400": { description: "Invalid query" },
+          "503": { description: "Search unavailable when fallback is disabled" }
+        }
+      }
+    },
     "/api/tickets/{ticketId}": {
       get: {
         summary: "Ticket details",
