@@ -53,7 +53,7 @@ export function SearchPage() {
       <form onSubmit={submit} key={params.toString()}>
         <label className="wide">جستجوی آزاد<input name="q" defaultValue={params.get("q") ?? ""} placeholder="نام تیم، ورزشگاه، لیگ…" /></label>
         <label>نام تیم<input name="team" defaultValue={params.get("team") ?? ""} placeholder="مثلاً پرسپولیس" /></label>
-        <label>شناسه نوع ورزش<input name="sportTypeId" inputMode="numeric" defaultValue={params.get("sportTypeId") ?? ""} /></label>
+        <label>نوع ورزش<input name="sport" defaultValue={params.get("sport") ?? ""} placeholder="مثلاً فوتبال" /></label>
         <label>شهر<select name="cityId" defaultValue={params.get("cityId") ?? ""}><option value="">همه شهرها</option>{cities.map((city) => <option key={city.city_id} value={city.city_id}>{city.name}</option>)}</select></label>
         <label>محل برگزاری<select name="venueId" defaultValue={params.get("venueId") ?? ""}><option value="">همه محل‌ها</option>{venues.map((venue) => <option key={venue.venue_id} value={venue.venue_id}>{venue.name}</option>)}</select></label>
         <label>از تاریخ<input type="datetime-local" name="startDate" defaultValue={params.get("startDate")?.slice(0, 16) ?? ""} /></label>
@@ -61,6 +61,9 @@ export function SearchPage() {
         <label>حداقل قیمت<input type="number" min="0" name="minPrice" defaultValue={params.get("minPrice") ?? ""} /></label>
         <label>حداکثر قیمت<input type="number" min="0" name="maxPrice" defaultValue={params.get("maxPrice") ?? ""} /></label>
         <label>امکانات<input name="facility" defaultValue={params.get("facility") ?? ""} placeholder="مثلاً پارکینگ" /></label>
+        <label>شناسه رده بلیت<input type="number" min="1" name="categoryId" defaultValue={params.get("categoryId") ?? ""} /></label>
+        <label>وضعیت<select name="status" defaultValue={params.get("status") ?? ""}><option value="">همه وضعیت‌ها</option><option value="available">موجود</option><option value="reserved">رزروشده</option><option value="sold">فروخته‌شده</option><option value="cancelled">لغوشده</option></select></label>
+        <label>محدوده موجودی<select name="remainingOnly" defaultValue={params.get("remainingOnly") ?? "true"}><option value="true">فقط قابل رزرو</option><option value="false">همه بلیت‌ها</option></select></label>
         <label>مرتب‌سازی<select name="sortBy" defaultValue={params.get("sortBy") ?? "matchDate"}><option value="matchDate">نزدیک‌ترین مسابقه</option><option value="price">قیمت</option><option value="createdAt">جدیدترین بلیت</option><option value="relevance">مرتبط‌ترین</option></select></label>
         <label>جهت<select name="sortOrder" defaultValue={params.get("sortOrder") ?? "asc"}><option value="asc">صعودی</option><option value="desc">نزولی</option></select></label>
         <div className="form-actions wide"><button type="submit">جستجوی بلیت</button><button type="button" className="secondary" onClick={() => setParams({})}>پاک‌کردن فیلترها</button></div>

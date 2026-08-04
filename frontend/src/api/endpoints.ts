@@ -24,5 +24,6 @@ export const api = {
   updateReport: (id: string, status: string, response?: string) => apiRequest<Report>(`/api/admin/reports/${id}/status`, { method: "PATCH", body: JSON.stringify({ status, ...(response ? { response } : {}) }) }),
   adminReservations: (status?: string) => apiRequest<{ items: Reservation[]; pagination: Pagination }>(`/api/admin/reservations${toQuery({ status, limit: 100 })}`),
   updateReservationStatus: (id: string, status: string) => apiRequest<unknown>(`/api/admin/reservations/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  changeReservationTicket: (id: string, ticketId: string) => apiRequest<unknown>(`/api/admin/reservations/${id}/ticket`, { method: "PATCH", body: JSON.stringify({ ticketId: Number(ticketId) }) }),
   suspiciousPayments: () => apiRequest<Array<Record<string, unknown>>>("/api/admin/payments/suspicious")
 };
