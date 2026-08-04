@@ -2,6 +2,7 @@ import { query, transaction } from "../config/database";
 import { bumpTicketCacheVersion } from "../config/redis";
 import { AppError } from "../utils/AppError";
 import { cancel } from "./cancellationService";
+import { syncTicketDocuments } from "../search/sync";
 
 export async function listReservations(input: {
   status?: string;
@@ -66,6 +67,7 @@ export async function reservationDetails(id: number) {
 
 export async function setReservationStatus(id: number, status: string, supportId: string) {
   if (status === "cancelled") return cancel(id, supportId, "support", "Cancelled by support");
+  let changedTicketIds: string[] = [];
   const result = await transaction(async (client) => {
     const locked = await client.query<{
       status: string;
@@ -97,13 +99,14 @@ export async function setReservationStatus(id: number, status: string, supportId
         "UPDATE reservations SET status = 'paid' WHERE order_id = $1 AND status = 'pending'",
         [row.order_id]
       );
-      await client.query(
+      const updatedTickets = await client.query<{ ticket_id: string }>(
         `UPDATE tickets SET status = 'sold'
          WHERE ticket_id IN (
            SELECT ticket_id FROM reservations WHERE order_id = $1 AND status = 'paid'
-         )`,
+         ) RETURNING ticket_id`,
         [row.order_id]
       );
+      changedTicketIds = updatedTickets.rows.map((ticket) => ticket.ticket_id);
       await client.query("UPDATE orders SET status = 'paid' WHERE order_id = $1", [
         row.order_id
       ]);
@@ -114,6 +117,7 @@ export async function setReservationStatus(id: number, status: string, supportId
       await client.query("UPDATE tickets SET status = 'available' WHERE ticket_id = $1", [
         row.ticket_id
       ]);
+      changedTicketIds = [row.ticket_id];
       await client.query(
         `UPDATE orders SET status = 'expired'
          WHERE order_id = $1
@@ -126,6 +130,7 @@ export async function setReservationStatus(id: number, status: string, supportId
     }
     return { reservationId: id, status, reviewedBy: supportId };
   });
+  await syncTicketDocuments(changedTicketIds);
   await bumpTicketCacheVersion();
   return result;
 }
@@ -241,6 +246,7 @@ export async function changeReservationTicket(
       reviewedBy: supportId
     };
   });
+  await syncTicketDocuments([result.oldTicketId, result.ticketId]);
   await bumpTicketCacheVersion();
   return result;
 }

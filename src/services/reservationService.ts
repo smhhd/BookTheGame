@@ -3,6 +3,7 @@ import { bumpTicketCacheVersion } from "../config/redis";
 import { env } from "../config/env";
 import * as repository from "../repositories/reservationRepository";
 import { AppError } from "../utils/AppError";
+import { syncTicketDocuments } from "../search/sync";
 
 export async function createReservation(userId: string, ticketIds: number[]) {
   const result = await transaction(async (client) => {
@@ -47,6 +48,7 @@ export async function createReservation(userId: string, ticketIds: number[]) {
     }
     return created;
   });
+  await syncTicketDocuments(ticketIds);
   await bumpTicketCacheVersion();
   return result;
 }

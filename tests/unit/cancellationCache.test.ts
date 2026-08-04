@@ -7,6 +7,9 @@ jest.mock("../../src/config/redis", () => ({
   bumpTicketCacheVersion: jest.fn(),
   cacheDelete: jest.fn()
 }));
+jest.mock("../../src/search/sync", () => ({
+  syncTicketDocuments: jest.fn().mockResolvedValue(true)
+}));
 
 import type { PoolClient } from "pg";
 import { transaction } from "../../src/config/database";

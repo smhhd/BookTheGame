@@ -3,6 +3,7 @@ import { transaction } from "../config/database";
 import { env } from "../config/env";
 import { bumpTicketCacheVersion, cacheDelete } from "../config/redis";
 import { AppError } from "../utils/AppError";
+import { syncTicketDocuments } from "../search/sync";
 
 export async function pay(input: {
   userId: string;
@@ -13,6 +14,7 @@ export async function pay(input: {
   if (env.NODE_ENV === "production" && input.simulateStatus !== "SUCCESS") {
     throw new AppError(400, "SIMULATION_DISABLED", "Payment simulation is disabled");
   }
+  let changedTicketIds: string[] = [];
   const result = await transaction(async (client) => {
     const orderResult = await client.query<{
       order_id: string;
@@ -105,9 +107,11 @@ export async function pay(input: {
        WHERE ticket_id = ANY($1::bigint[]) AND status = 'reserved'`,
       [items.rows.map((row) => row.ticket_id)]
     );
+    changedTicketIds = items.rows.map((row) => row.ticket_id);
     return payment.rows[0];
   });
   if (input.simulateStatus === "SUCCESS") {
+    await syncTicketDocuments(changedTicketIds);
     await bumpTicketCacheVersion();
     if (input.method === "wallet") await cacheDelete(`profile:${input.userId}`);
   }

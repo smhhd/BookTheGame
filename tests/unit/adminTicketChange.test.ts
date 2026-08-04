@@ -5,6 +5,9 @@ jest.mock("../../src/config/database", () => ({
 jest.mock("../../src/config/redis", () => ({
   bumpTicketCacheVersion: jest.fn()
 }));
+jest.mock("../../src/search/sync", () => ({
+  syncTicketDocuments: jest.fn().mockResolvedValue(true)
+}));
 
 import { transaction } from "../../src/config/database";
 import { bumpTicketCacheVersion } from "../../src/config/redis";

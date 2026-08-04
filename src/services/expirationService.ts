@@ -1,6 +1,7 @@
 import { transaction } from "../config/database";
 import { bumpTicketCacheVersion } from "../config/redis";
 import { env } from "../config/env";
+import { syncTicketDocuments } from "../search/sync";
 
 export async function expireReservations(batchSize = env.EXPIRATION_BATCH_SIZE) {
   const result = await transaction(async (client) => {
@@ -42,6 +43,9 @@ export async function expireReservations(batchSize = env.EXPIRATION_BATCH_SIZE) 
     );
     return { expiredOrders: orderIds.length, releasedTicketIds: ticketIds };
   });
-  if (result.releasedTicketIds.length) await bumpTicketCacheVersion();
+  if (result.releasedTicketIds.length) {
+    await syncTicketDocuments(result.releasedTicketIds);
+    await bumpTicketCacheVersion();
+  }
   return result;
 }

@@ -13,6 +13,9 @@ import { reportRoutes } from "./routes/reportRoutes";
 import { reservationRoutes } from "./routes/reservationRoutes";
 import { ticketRoutes } from "./routes/ticketRoutes";
 import { userRoutes } from "./routes/userRoutes";
+import { elasticsearchHealth } from "./search/client";
+import { getSearchSyncState } from "./search/sync";
+import { asyncHandler } from "./utils/asyncHandler";
 
 export const app = express();
 app.disable("x-powered-by");
@@ -28,6 +31,13 @@ app.use(express.json({ limit: env.BODY_LIMIT }));
 app.get("/health", (_request, response) => {
   response.json({ success: true, message: "Service is healthy", data: {} });
 });
+app.get("/health/search", asyncHandler(async (_request, response) => {
+  response.json({
+    success: true,
+    message: "Search health checked",
+    data: { elasticsearch: await elasticsearchHealth(), synchronization: getSearchSyncState() }
+  });
+}));
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapi));
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);

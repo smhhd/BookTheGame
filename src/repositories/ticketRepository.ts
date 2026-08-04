@@ -5,7 +5,8 @@ const sortColumns: Record<TicketSearchInput["sortBy"], string> = {
   matchDate: "m.match_datetime",
   price: "t.price",
   createdAt: "t.created_at",
-  ticketId: "t.ticket_id"
+  ticketId: "t.ticket_id",
+  relevance: "m.match_datetime"
 };
 
 function filters(input: TicketSearchInput) {
@@ -15,12 +16,26 @@ function filters(input: TicketSearchInput) {
     values.push(value);
     clauses.push(condition.replace("?", `$${values.length}`));
   };
+  if (input.q) {
+    add(
+      "concat_ws(' ', st.name, ht.name, at.name, v.name, c.name, tc.name, comp.name) ILIKE '%' || ? || '%'",
+      input.q
+    );
+  }
+  if (input.team) add("concat_ws(' ', ht.name, at.name) ILIKE '%' || ? || '%'", input.team);
   if (input.sportTypeId) add("m.sport_type_id = ?", input.sportTypeId);
   if (input.homeTeamId) add("m.home_team_id = ?", input.homeTeamId);
   if (input.awayTeamId) add("m.away_team_id = ?", input.awayTeamId);
   if (input.cityId) add("v.city_id = ?", input.cityId);
   if (input.venueId) add("v.venue_id = ?", input.venueId);
   if (input.categoryId) add("t.category_id = ?", input.categoryId);
+  if (input.status) add("t.status = ?", input.status);
+  if (input.facility) {
+    add(
+      "EXISTS (SELECT 1 FROM ticket_facilities tf2 JOIN facilities f2 ON f2.facility_id = tf2.facility_id WHERE tf2.ticket_id = t.ticket_id AND f2.name = ?)",
+      input.facility
+    );
+  }
   if (input.startDate) add("m.match_datetime >= ?::timestamptz", input.startDate);
   if (input.endDate) add("m.match_datetime <= ?::timestamptz", input.endDate);
   if (input.minPrice !== undefined) add("t.price >= ?::numeric", input.minPrice);
@@ -37,6 +52,7 @@ const joins = `
   FROM tickets t
   JOIN matches m ON m.match_id = t.match_id
   JOIN sport_types st ON st.sport_type_id = m.sport_type_id
+  LEFT JOIN competitions comp ON comp.competition_id = m.competition_id
   JOIN teams ht ON ht.team_id = m.home_team_id
   JOIN teams at ON at.team_id = m.away_team_id
   JOIN venues v ON v.venue_id = t.venue_id
@@ -60,10 +76,16 @@ export async function searchTickets(input: TicketSearchInput) {
        t.ticket_id, t.price, t.status, t.category_id, tc.name AS category_name,
        m.match_id, m.match_datetime, m.status AS match_status,
        st.sport_type_id, st.name AS sport_type,
+       comp.competition_id, comp.name AS competition_name,
        ht.team_id AS home_team_id, ht.name AS home_team,
        at.team_id AS away_team_id, at.name AS away_team,
        v.venue_id, v.name AS venue_name, c.city_id, c.name AS city_name,
        s.seat_id, s.section_name, s.row_number, s.seat_number,
+       COALESCE((
+         SELECT jsonb_agg(jsonb_build_object('facilityId', f.facility_id::text, 'name', f.name) ORDER BY f.name)
+         FROM ticket_facilities tf JOIN facilities f ON f.facility_id = tf.facility_id
+         WHERE tf.ticket_id = t.ticket_id
+       ), '[]'::jsonb) AS facilities,
        CASE WHEN t.status = 'available' THEN 1 ELSE 0 END AS remaining_capacity
      ${joins} ${where}
      ORDER BY ${sortColumn} ${sortOrder}, t.ticket_id ASC

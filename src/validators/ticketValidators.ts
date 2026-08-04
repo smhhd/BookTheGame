@@ -11,12 +11,16 @@ export const venueQuerySchema = z
 
 export const ticketSearchSchema = z
   .object({
+    q: z.string().trim().min(1).max(200).optional(),
+    team: z.string().trim().min(1).max(100).optional(),
     sportTypeId: id.optional(),
     homeTeamId: id.optional(),
     awayTeamId: id.optional(),
     cityId: id.optional(),
     venueId: id.optional(),
     categoryId: id.optional(),
+    status: z.enum(["available", "reserved", "sold", "cancelled"]).optional(),
+    facility: z.string().trim().min(1).max(100).optional(),
     startDate: dateTime.optional(),
     endDate: dateTime.optional(),
     minPrice: z.coerce.number().min(0).optional(),
@@ -26,7 +30,7 @@ export const ticketSearchSchema = z
       .default("true")
       .transform((value) => value === "true"),
     sortBy: z
-      .enum(["matchDate", "price", "createdAt", "ticketId"])
+      .enum(["matchDate", "price", "createdAt", "ticketId", "relevance"])
       .default("matchDate"),
     sortOrder: z.enum(["asc", "desc"]).default("asc"),
     ...pagination

@@ -3,6 +3,7 @@ import { transaction } from "../config/database";
 import { bumpTicketCacheVersion, cacheDelete } from "../config/redis";
 import { RoleName } from "../types";
 import { AppError } from "../utils/AppError";
+import { syncTicketDocuments } from "../search/sync";
 
 interface PenaltyRow {
   reservation_id: string;
@@ -110,6 +111,7 @@ export async function cancel(
   reason?: string
 ) {
   let refundedUserId: string | undefined;
+  let changedTicketId: string | undefined;
   const result = await transaction(async (client) => {
     const row = await getPenaltyRow(client, reservationId, true);
     if (!row) throw new AppError(404, "RESERVATION_NOT_FOUND", "Reservation was not found");
@@ -216,6 +218,7 @@ export async function cancel(
     await client.query("UPDATE tickets SET status = 'available' WHERE ticket_id = $1", [
       row.ticket_id
     ]);
+    changedTicketId = row.ticket_id;
     const remaining = await client.query<{
       pending_count: string;
       paid_count: string;
@@ -248,6 +251,7 @@ export async function cancel(
     }
     return { requestId, penalty, refund, alreadyCancelled: false };
   });
+  if (changedTicketId) await syncTicketDocuments([changedTicketId]);
   await bumpTicketCacheVersion();
   if (refundedUserId) await cacheDelete(`profile:${refundedUserId}`);
   return result;
