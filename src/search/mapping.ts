@@ -16,6 +16,7 @@ export const ticketIndexDefinition = {
     dynamic: "strict",
     properties: {
       ticketId: { type: "keyword" },
+      ticketOrder: { type: "long" },
       matchId: { type: "keyword" },
       sportTypeId: { type: "keyword" },
       sportType: { type: "text", analyzer: "mixed_text", fields: { keyword: { type: "keyword" } } },

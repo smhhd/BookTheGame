@@ -13,6 +13,7 @@ export const ticketSearchSchema = z
   .object({
     q: z.string().trim().min(1).max(200).optional(),
     team: z.string().trim().min(1).max(100).optional(),
+    sport: z.string().trim().min(1).max(100).optional(),
     sportTypeId: id.optional(),
     homeTeamId: id.optional(),
     awayTeamId: id.optional(),

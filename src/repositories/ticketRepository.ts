@@ -23,6 +23,7 @@ function filters(input: TicketSearchInput) {
     );
   }
   if (input.team) add("concat_ws(' ', ht.name, at.name) ILIKE '%' || ? || '%'", input.team);
+  if (input.sport) add("st.name ILIKE '%' || ? || '%'", input.sport);
   if (input.sportTypeId) add("m.sport_type_id = ?", input.sportTypeId);
   if (input.homeTeamId) add("m.home_team_id = ?", input.homeTeamId);
   if (input.awayTeamId) add("m.away_team_id = ?", input.awayTeamId);

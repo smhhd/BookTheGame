@@ -39,6 +39,7 @@ const documentSelect = `
 function toDocument(row: SearchDocumentRow): TicketSearchDocument {
   return {
     ticketId: row.ticket_id,
+    ticketOrder: Number(row.ticket_id),
     matchId: row.match_id,
     sportTypeId: row.sport_type_id,
     sportType: row.sport_type,

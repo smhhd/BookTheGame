@@ -7,6 +7,7 @@ describe("Elasticsearch ticket query", () => {
     const input = ticketSearchSchema.parse({
       q: "جام تهران",
       team: "استقلال",
+      sport: "فوتبال",
       sportTypeId: "1",
       cityId: "2",
       facility: "پارکینگ",
@@ -24,7 +25,8 @@ describe("Elasticsearch ticket query", () => {
     expect(body.size).toBe(10);
     expect(body.track_total_hits).toBe(true);
     expect(body.sort[0]).toEqual({ price: "desc" });
-    expect(body.query.bool.must).toHaveLength(2);
+    expect(body.query.bool.must).toHaveLength(3);
+    expect(body.query.bool.must).toContainEqual({ match: { sportType: { query: "فوتبال", operator: "and" } } });
     expect(body.query.bool.filter).toEqual(expect.arrayContaining([
       { term: { sportTypeId: "1" } },
       { term: { cityId: "2" } },

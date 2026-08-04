@@ -5,6 +5,7 @@ export interface SearchFacility {
 
 export interface TicketSearchDocument {
   ticketId: string;
+  ticketOrder: number;
   matchId: string;
   sportTypeId: string;
   sportType: string;

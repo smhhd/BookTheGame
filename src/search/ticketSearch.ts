@@ -49,11 +49,12 @@ export function buildTicketSearchBody(input: TicketSearchInput): Record<string, 
   if (input.team) {
     must.push({ multi_match: { query: input.team, fields: ["homeTeam^2", "awayTeam^2"], operator: "and" } });
   }
+  if (input.sport) must.push({ match: { sportType: { query: input.sport, operator: "and" } } });
   const sortField = {
     matchDate: "matchDatetime",
     price: "price",
     createdAt: "createdAt",
-    ticketId: "ticketId"
+    ticketId: "ticketOrder"
   }[input.sortBy as Exclude<TicketSearchInput["sortBy"], "relevance">];
   const sort = input.sortBy === "relevance"
     ? [{ _score: "desc" }, { matchDatetime: "asc" }]

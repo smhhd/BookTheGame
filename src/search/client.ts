@@ -20,14 +20,15 @@ export async function elasticRequest<T>(
   path: string,
   options: RequestInit & { rawBody?: string } = {}
 ): Promise<T> {
+  const { rawBody, ...requestOptions } = options;
   const headers = new Headers(options.headers);
   const auth = authorization();
   if (auth) headers.set("authorization", auth);
   if (options.body && !headers.has("content-type")) headers.set("content-type", "application/json");
   try {
     const response = await fetch(new URL(path, `${env.ELASTICSEARCH_NODE}/`), {
-      ...options,
-      body: options.rawBody ?? options.body,
+      ...requestOptions,
+      body: rawBody ?? options.body,
       headers,
       signal: AbortSignal.timeout(env.ELASTICSEARCH_REQUEST_TIMEOUT_MS)
     });
