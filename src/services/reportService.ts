@@ -130,10 +130,10 @@ export async function updateReportStatus(
   return transaction(async (client) => {
     const result = await client.query(
       `UPDATE reports
-       SET status = $2, reviewed_by_support_id = $3,
-           reviewed_at = CASE WHEN $2 = 'pending' THEN NULL ELSE CURRENT_TIMESTAMP END,
+       SET status = $2::varchar(20), reviewed_by_support_id = $3,
+           reviewed_at = CASE WHEN $2::varchar(20) = 'pending' THEN NULL ELSE CURRENT_TIMESTAMP END,
            support_response = CASE
-             WHEN $2 = 'pending' THEN NULL
+             WHEN $2::varchar(20) = 'pending' THEN NULL
              ELSE COALESCE($4, support_response)
            END
        WHERE report_id = $1

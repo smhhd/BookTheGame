@@ -3,6 +3,7 @@ import * as controller from "../controllers/reservationController";
 import { authenticate } from "../middlewares/auth";
 import { validate } from "../middlewares/validate";
 import { asyncHandler } from "../utils/asyncHandler";
+import { reservationRateLimiter } from "../middlewares/rateLimit";
 import {
   cancellationSchema,
   createReservationSchema,
@@ -14,6 +15,7 @@ export const reservationRoutes = Router();
 reservationRoutes.use(authenticate);
 reservationRoutes.post(
   "/",
+  reservationRateLimiter,
   validate({ body: createReservationSchema }),
   asyncHandler(controller.create)
 );

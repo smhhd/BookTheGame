@@ -21,7 +21,7 @@ API در [`docs/phase4-api.md`](docs/phase4-api.md) و سناریوهای دست
 
 لایه‌ها در `src/routes`، `controllers`، `services` و `repositories` جدا هستند.
 Validation با Zod، احراز هویت با JWT، هش رمز با bcryptjs، امنیت HTTP با Helmet
-و محدودسازی Auth با express-rate-limit انجام می‌شود. Redis فقط برای OTP و
+و محدودسازی Auth، جستجو، رزرو و پرداخت با express-rate-limit انجام می‌شود. Redis فقط برای OTP و
 Cache-Aside و Elasticsearch فقط برای جستجو استفاده می‌شود. خطاهای عملیاتی Cache باعث شکست عملیات اصلی
 PostgreSQL نمی‌شوند؛ بااین‌حال OTP به Redis وابسته است و اتصال اولیه Redis طبق
 سیاست reconnect کلاینت تا زمان برقراری دوباره تلاش می‌شود.
@@ -268,13 +268,16 @@ Restart در وضعیت خطا، `npm run search:reindex` مسیر بازیاب�
 npm run typecheck
 npm test
 npm run test:integration
+npm run test:e2e:phase4
+npm run test:e2e:phase4-security
+npm run test:e2e:phase4-failure
 npm run build
 cd frontend && npm run typecheck
 cd frontend && npm test
 cd frontend && npm run build
 ```
 
-۱۲ Suite و ۲۸ تست Backend علاوه بر رگرسیون فاز سوم، Query/Mapping، Reindex
+۱۵ Suite و ۳۵ تست Backend علاوه بر رگرسیون فاز سوم، Query/Mapping، Reindex
 دسته‌ای، Cache Hit/Miss و Fallback را پوشش می‌دهند. ۳ فایل و ۶ تست Frontend
 جستجو، فیلتر، حالت خالی، Route خصوصی/پشتیبان و جریان رزرو تا پرداخت را بررسی
 می‌کنند؛ سناریوهای تکمیلی دستی در مستند تست فاز چهارم آمده‌اند.

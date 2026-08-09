@@ -1,10 +1,18 @@
-import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
+import { Pool, PoolClient, QueryResult, QueryResultRow, types } from "pg";
 import { env } from "./env";
+
+// The phase schemas use timestamp without time zone with UTC as the storage convention.
+// node-postgres otherwise interprets these values in the API host's local timezone.
+export function parseUtcTimestamp(value: string): Date {
+  return new Date(`${value.replace(" ", "T")}Z`);
+}
+
+types.setTypeParser(1114, parseUtcTimestamp);
 
 export const pool = new Pool({
   connectionString: env.DATABASE_URL,
   max: env.DATABASE_POOL_MAX,
-  options: "-c search_path=book_the_game,public"
+  options: "-c search_path=book_the_game,public -c timezone=UTC"
 });
 
 pool.on("error", (error) => {

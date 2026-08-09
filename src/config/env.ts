@@ -40,6 +40,9 @@ const schema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   BODY_LIMIT: z.string().default("100kb"),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(30),
+  SEARCH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(120),
+  RESERVATION_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(60),
+  PAYMENT_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(30),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info")
 });
 

@@ -9,6 +9,11 @@ interface PgError extends Error {
   constraint?: string;
 }
 
+interface HttpBodyError extends Error {
+  status?: number;
+  type?: string;
+}
+
 export const notFoundHandler: RequestHandler = (request, _response, next) => {
   next(new AppError(404, "ROUTE_NOT_FOUND", `Route ${request.method} ${request.path} was not found`));
 };
@@ -24,8 +29,13 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _request, resp
   } else if (error instanceof JsonWebTokenError) {
     appError = new AppError(401, "INVALID_TOKEN", "Authentication token is invalid");
   } else {
+    const bodyError = error as HttpBodyError;
     const pgError = error as PgError;
-    if (pgError.code === "23505") {
+    if (bodyError.status === 400 && bodyError.type === "entity.parse.failed") {
+      appError = new AppError(400, "MALFORMED_JSON", "Request body contains invalid JSON");
+    } else if (bodyError.status === 413 && bodyError.type === "entity.too.large") {
+      appError = new AppError(413, "PAYLOAD_TOO_LARGE", "Request body is too large");
+    } else if (pgError.code === "23505") {
       appError = new AppError(409, "DUPLICATE_RESOURCE", "A unique value already exists", [
         { constraint: pgError.constraint }
       ]);

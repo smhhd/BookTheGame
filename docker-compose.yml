@@ -55,6 +55,7 @@ services:
       REDIS_URL: redis://redis:6379
       ELASTICSEARCH_NODE: http://elasticsearch:9200
       ELASTICSEARCH_INDEX: book_the_game_tickets_v1
+      ELASTICSEARCH_REQUEST_TIMEOUT_MS: 10000
       JWT_SECRET: docker-development-jwt-secret-change-123456
       OTP_HASH_SECRET: docker-development-otp-secret-change-123456
       EXPOSE_DEV_OTP: "true"
@@ -71,6 +72,7 @@ services:
       REDIS_URL: redis://redis:6379
       ELASTICSEARCH_NODE: http://elasticsearch:9200
       ELASTICSEARCH_INDEX: book_the_game_tickets_v1
+      ELASTICSEARCH_REQUEST_TIMEOUT_MS: 30000
       JWT_SECRET: docker-development-jwt-secret-change-123456
       OTP_HASH_SECRET: docker-development-otp-secret-change-123456
     command: ["npm", "run", "search:reindex:prod"]
