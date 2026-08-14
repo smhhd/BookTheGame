@@ -9,8 +9,8 @@ import {
   toPublicUser
 } from "../repositories/userRepository";
 import { AppError } from "../utils/AppError";
+import { sendVerificationCode } from "./emailService";
 import { issueToken } from "./tokenService";
-import { otpNotificationProvider } from "./notificationService";
 
 function normalizeIdentifier(identifier: string): string {
   return identifier.includes("@") ? identifier.toLowerCase() : identifier;
@@ -44,6 +44,8 @@ if not decoded or type(record) ~= 'table' then
   return 0
 end
 
+if record.delivered ~= true then return 0 end
+
 local attempts = tonumber(record.attempts) or 0
 local max_attempts = tonumber(ARGV[2])
 if attempts >= max_attempts then
@@ -63,6 +65,38 @@ if record.hash ~= ARGV[1] then
 end
 
 redis.call('DEL', KEYS[1])
+return 1
+`;
+
+// Removes only the OTP created by the failed delivery attempt. A newer OTP
+// written concurrently for the same account remains valid.
+export const OTP_DELETE_IF_HASH_MATCHES_SCRIPT = `
+local raw = redis.call('GET', KEYS[1])
+if not raw then return 0 end
+
+local decoded, record = pcall(cjson.decode, raw)
+if not decoded or type(record) ~= 'table' then
+  redis.call('DEL', KEYS[1])
+  return 1
+end
+
+if record.hash == ARGV[1] then
+  return redis.call('DEL', KEYS[1])
+end
+return 0
+`;
+
+export const OTP_MARK_DELIVERED_IF_HASH_MATCHES_SCRIPT = `
+local raw = redis.call('GET', KEYS[1])
+if not raw then return 0 end
+
+local decoded, record = pcall(cjson.decode, raw)
+if not decoded or type(record) ~= 'table' or record.hash ~= ARGV[1] then
+  return 0
+end
+
+record.delivered = true
+redis.call('SET', KEYS[1], cjson.encode(record), 'KEEPTTL')
 return 1
 `;
 
@@ -108,20 +142,48 @@ export async function requestOtp(identifierInput: string) {
     throw new AppError(429, "OTP_RATE_LIMIT", "Too many OTP requests");
   }
 
+  const user = await findUserByIdentifier(identifier);
+  if (!user?.email) return { expiresInSeconds: env.OTP_TTL_SECONDS };
+
   const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
+  const hash = hashOtp(identifier, code);
+  const key = otpKey(identifier);
   await redis.set(
-    otpKey(identifier),
-    JSON.stringify({ hash: hashOtp(identifier, code), attempts: 0 }),
+    key,
+    JSON.stringify({ hash, attempts: 0, delivered: false }),
     { EX: env.OTP_TTL_SECONDS }
   );
 
-  const user = await findUserByIdentifier(identifier);
-  if (user) await otpNotificationProvider.sendOtp(identifier, code);
+  try {
+    await sendVerificationCode({
+      to: user.email,
+      code,
+      expiresInSeconds: env.OTP_TTL_SECONDS
+    });
+  } catch {
+    try {
+      await redis.eval(OTP_DELETE_IF_HASH_MATCHES_SCRIPT, {
+        keys: [key],
+        arguments: [hash]
+      });
+    } catch {
+      // The OTP remains short-lived and unknown to the user. Preserve the SMTP
+      // failure below without logging credentials, recipient, or generated code.
+    }
+    throw new AppError(503, "OTP_DELIVERY_FAILED", "OTP delivery is temporarily unavailable");
+  }
 
-  return {
-    expiresInSeconds: env.OTP_TTL_SECONDS,
-    ...(env.NODE_ENV !== "production" && env.EXPOSE_DEV_OTP && user ? { devOtp: code } : {})
-  };
+  const activated = Number(
+    await redis.eval(OTP_MARK_DELIVERED_IF_HASH_MATCHES_SCRIPT, {
+      keys: [key],
+      arguments: [hash]
+    })
+  );
+  if (activated !== 1) {
+    throw new AppError(503, "OTP_STORE_UNAVAILABLE", "OTP service is temporarily unavailable");
+  }
+
+  return { expiresInSeconds: env.OTP_TTL_SECONDS };
 }
 
 export async function verifyOtp(identifierInput: string, otp: string) {

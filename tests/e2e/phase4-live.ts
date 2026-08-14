@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { Pool } from "pg";
 import { createClient } from "redis";
 
@@ -7,6 +8,7 @@ const ELASTIC = process.env.QA_ELASTIC_URL ?? "http://127.0.0.1:19200";
 const DATABASE_URL = process.env.QA_DATABASE_URL ??
   "postgresql://postgres:postgres@127.0.0.1:15432/book_the_game";
 const REDIS_URL = process.env.QA_REDIS_URL ?? "redis://127.0.0.1:16379";
+const OTP_HASH_SECRET = "qa-only-otp-secret-at-least-32-characters";
 
 interface ApiResponse {
   status: number;
@@ -30,6 +32,23 @@ async function api(
 
 function pass(name: string, evidence: string): void {
   console.info(`PASS | ${name} | ${evidence}`);
+}
+
+async function replaceWithKnownOtp(
+  redis: ReturnType<typeof createClient>,
+  identifier: string,
+  code: string
+): Promise<void> {
+  const normalized = identifier.toLowerCase();
+  const namespace = normalized.includes("@") ? "email" : "phone";
+  const hash = createHmac("sha256", OTP_HASH_SECRET)
+    .update(`${normalized}:${code}`)
+    .digest("hex");
+  await redis.set(
+    `otp:${namespace}:${normalized}`,
+    JSON.stringify({ hash, attempts: 0, delivered: true }),
+    { EX: 300 }
+  );
 }
 
 async function main(): Promise<void> {
@@ -94,8 +113,9 @@ async function main(): Promise<void> {
       body: { identifier: userA.email }
     });
     assert.equal(otpRequest.status, 200);
-    const otp = String(otpRequest.body.data.devOtp);
-    assert.match(otp, /^[0-9]{6}$/);
+    assert.deepEqual(otpRequest.body.data, { expiresInSeconds: 300 });
+    const otp = "123456";
+    await replaceWithKnownOtp(redis, userA.email, otp);
     const otpKey = `otp:email:${userA.email.toLowerCase()}`;
     const otpTtl = await redis.ttl(otpKey);
     assert.ok(otpTtl > 0 && otpTtl <= 300, `unexpected OTP TTL: ${otpTtl}`);
@@ -142,9 +162,26 @@ async function main(): Promise<void> {
 
     const pageOne = await api("/api/tickets?remainingOnly=false&sortBy=ticketId&page=1&limit=5");
     const pageTwo = await api("/api/tickets?remainingOnly=false&sortBy=ticketId&page=2&limit=5");
+    const searchableTicketCount = await pool.query<{ count: string }>(
+      `SELECT count(*)::text AS count
+       FROM tickets t
+       JOIN matches m ON m.match_id = t.match_id
+       JOIN sport_types st ON st.sport_type_id = m.sport_type_id
+       JOIN teams ht ON ht.team_id = m.home_team_id
+       JOIN teams at ON at.team_id = m.away_team_id
+       JOIN venues v ON v.venue_id = t.venue_id
+       JOIN cities c ON c.city_id = v.city_id
+       JOIN ticket_categories tc ON tc.category_id = t.category_id
+       JOIN seats s ON s.seat_id = t.seat_id`
+    );
+    const expectedSearchableTickets = Number(searchableTicketCount.rows[0]!.count);
+    const elasticCountResponse = await fetch(`${ELASTIC}/book_the_game_tickets_v1/_count`);
+    assert.equal(elasticCountResponse.status, 200);
+    const elasticCount = await elasticCountResponse.json() as { count: number };
     const firstIds = new Set(pageOne.body.data.items.map((item: any) => item.ticket_id));
     assert.ok(pageTwo.body.data.items.every((item: any) => !firstIds.has(item.ticket_id)));
-    assert.equal(pageOne.body.data.pagination.total, 31);
+    assert.equal(pageOne.body.data.pagination.total, expectedSearchableTickets);
+    assert.equal(elasticCount.count, expectedSearchableTickets);
     assert.equal((await api("/api/tickets?page=0")).status, 400);
     assert.equal((await api("/api/tickets?limit=101")).status, 400);
     assert.equal((await api("/api/tickets?q=definitely-no-result")).body.data.items.length, 0);
@@ -244,7 +281,10 @@ async function main(): Promise<void> {
     process.env.ELASTICSEARCH_INDEX = "book_the_game_tickets_v1";
     process.env.ELASTICSEARCH_REQUEST_TIMEOUT_MS = "30000";
     process.env.JWT_SECRET = "qa-only-jwt-secret-at-least-32-characters";
-    process.env.OTP_HASH_SECRET = "qa-only-otp-secret-at-least-32-characters";
+    process.env.OTP_HASH_SECRET = OTP_HASH_SECRET;
+    process.env.SMTP_USER = "qa-sender@example.com";
+    process.env.SMTP_PASS = "qa-only-smtp-password";
+    process.env.SMTP_FROM_EMAIL = "qa-sender@example.com";
     const { expireReservations } = await import("../../src/services/expirationService");
     closeAppDatabase = (await import("../../src/config/database")).closeDatabase;
     closeAppRedis = (await import("../../src/config/redis")).closeRedis;
@@ -286,7 +326,10 @@ async function main(): Promise<void> {
       method: "POST",
       body: { identifier: "support1@example.com" }
     });
-    const supportOtp = String(supportOtpRequest.body.data.devOtp);
+    assert.equal(supportOtpRequest.status, 200);
+    assert.deepEqual(supportOtpRequest.body.data, { expiresInSeconds: 300 });
+    const supportOtp = "654321";
+    await replaceWithKnownOtp(redis, "support1@example.com", supportOtp);
     const supportLogin = await api("/api/auth/otp/verify", {
       method: "POST",
       body: { identifier: "support1@example.com", otp: supportOtp }

@@ -279,6 +279,361 @@ INSERT INTO facilities (facility_id, name) VALUES
 INSERT INTO ticket_facilities (ticket_id, facility_id) VALUES
 (1,1),(1,3),(2,1),(3,2),(3,5),(4,2),(4,5),(5,1),(6,1),(7,5),(8,3),(9,10),(10,4),(11,5),(12,10),(13,4),(14,10),(15,10),(16,10),(17,5),(18,3),(19,4),(20,3),(21,10),(22,4),(23,2),(24,3),(25,9),(26,9),(27,5),(28,5),(29,5),(30,4),(31,4);
 
+-- =========================================================
+-- Expanded sample data for realistic search and booking tests
+-- =========================================================
+
+INSERT INTO provinces (province_id, name) VALUES
+(11, 'Qom'),
+(12, 'Kerman'),
+(13, 'Hormozgan'),
+(14, 'Markazi'),
+(15, 'Qazvin'),
+(16, 'Zanjan'),
+(17, 'Golestan'),
+(18, 'Ardabil'),
+(19, 'Bushehr'),
+(20, 'Kurdistan'),
+(21, 'Kermanshah'),
+(22, 'Lorestan'),
+(23, 'Hamadan'),
+(24, 'Semnan'),
+(25, 'Sistan and Baluchestan'),
+(26, 'North Khorasan'),
+(27, 'South Khorasan'),
+(28, 'Chaharmahal and Bakhtiari'),
+(29, 'Kohgiluyeh and Boyer-Ahmad'),
+(30, 'Ilam');
+
+INSERT INTO cities (city_id, province_id, name) VALUES
+(13,11,'Qom'),(14,12,'Kerman'),(15,13,'Bandar Abbas'),(16,14,'Arak'),
+(17,15,'Qazvin'),(18,16,'Zanjan'),(19,17,'Gorgan'),(20,18,'Ardabil'),
+(21,19,'Bushehr'),(22,20,'Sanandaj'),(23,21,'Kermanshah'),(24,22,'Khorramabad'),
+(25,23,'Hamadan'),(26,24,'Semnan'),(27,25,'Zahedan'),(28,26,'Bojnord'),
+(29,27,'Birjand'),(30,28,'Shahrekord'),(31,29,'Yasuj'),(32,30,'Ilam'),
+(33,12,'Rafsanjan'),(34,12,'Sirjan'),(35,13,'Kish'),(36,13,'Qeshm'),
+(37,14,'Saveh'),(38,15,'Takestan'),(39,16,'Abhar'),(40,17,'Gonbad-e Kavus'),
+(41,18,'Meshgin Shahr'),(42,19,'Borazjan'),(43,20,'Saqqez'),(44,21,'Javanrud'),
+(45,22,'Borujerd'),(46,23,'Malayer'),(47,24,'Shahroud'),(48,25,'Chabahar'),
+(49,26,'Shirvan'),(50,27,'Qaen'),(51,28,'Borujen'),(52,29,'Gachsaran'),
+(53,30,'Dehloran'),(54,2,'Kashan'),(55,3,'Marvdasht'),(56,4,'Neyshabur'),
+(57,5,'Maragheh'),(58,6,'Abadan'),(59,7,'Anzali'),(60,8,'Amol');
+
+INSERT INTO users (
+    user_id, role_id, city_id, first_name, last_name, email, phone,
+    password_hash, status, registered_at
+)
+SELECT
+    user_id,
+    1,
+    1 + mod(user_id * 7, 60),
+    (ARRAY['Amir','Maryam','Sina','Zahra','Navid','Parisa','Kian','Mahsa','Arash','Shadi','Milad','Elham'])[1 + mod(user_id, 12)],
+    (ARRAY['Azimi','Bahrami','Farhadi','Ghasemi','Heydari','Kazemi','Mousavi','Nouri','Rostami','Shirazi','Taheri','Yousefi'])[1 + mod(user_id * 5, 12)],
+    'spectator.' || lpad(user_id::text, 3, '0') || '@example.com',
+    '0921' || lpad(user_id::text, 7, '0'),
+    'hash_seed_user_' || user_id,
+    CASE WHEN mod(user_id, 29) = 0 THEN 'blocked'
+         WHEN mod(user_id, 17) = 0 THEN 'inactive'
+         ELSE 'active' END,
+    CURRENT_TIMESTAMP - make_interval(days => 30 + mod(user_id * 17, 900))
+FROM generate_series(14, 130) AS generated(user_id);
+
+INSERT INTO users (
+    user_id, role_id, city_id, first_name, last_name, email, phone,
+    password_hash, status, registered_at
+)
+SELECT
+    user_id,
+    2,
+    1 + mod(user_id * 11, 60),
+    'Support',
+    (ARRAY['Rahimi','Karimi','Ahmadi','Moradi','Jafari','Akbari','Sadeghi','Hosseini'])[1 + mod(user_id, 8)],
+    'support' || (user_id - 127) || '@example.com',
+    '0935' || lpad((user_id - 127)::text, 7, '0'),
+    'hash_seed_support_' || user_id,
+    'active',
+    CURRENT_TIMESTAMP - make_interval(days => 120 + mod(user_id * 13, 700))
+FROM generate_series(131, 147) AS generated(user_id);
+
+INSERT INTO support_users (user_id, support_role_id)
+SELECT user_id, 2
+FROM generate_series(131, 147) AS generated(user_id);
+
+INSERT INTO organizers (organizer_id, city_id, name, email, phone, status)
+SELECT
+    organizer_id,
+    1 + mod(organizer_id * 13, 60),
+    c.name || ' ' ||
+        (ARRAY['Championship Office','Community Sports Board','Premier Events','Athletic Association','Tournament Group'])[1 + mod(organizer_id, 5)],
+    'organizer.' || lpad(organizer_id::text, 3, '0') || '@events.example.com',
+    '0217' || lpad(organizer_id::text, 7, '0'),
+    CASE WHEN mod(organizer_id, 19) = 0 THEN 'inactive' ELSE 'active' END
+FROM generate_series(11, 100) AS generated(organizer_id)
+JOIN cities c ON c.city_id = 1 + mod(organizer_id * 13, 60);
+
+INSERT INTO teams (team_id, sport_type_id, city_id, name)
+SELECT
+    team_id,
+    1 + mod(team_id - 21, 10),
+    1 + ((team_id - 21) / 10),
+    c.name || ' ' ||
+        (ARRAY['Falcons','Pioneers','Stars','United','Guardians','Waves'])[1 + mod((team_id - 21) / 10, 6)] ||
+        ' ' || st.name
+FROM generate_series(21, 200) AS generated(team_id)
+JOIN cities c ON c.city_id = 1 + ((team_id - 21) / 10)
+JOIN sport_types st ON st.sport_type_id = 1 + mod(team_id - 21, 10);
+
+INSERT INTO venues (venue_id, city_id, name, address, venue_type)
+SELECT
+    venue_id,
+    1 + mod(venue_id - 11, 60),
+    c.name || ' ' ||
+        CASE WHEN venue_id <= 70 THEN 'Community Sports Complex'
+             ELSE 'Riverside Championship Center' END,
+    c.name || ', Sports District ' || (1 + mod(venue_id * 3, 12)),
+    (ARRAY['stadium','hall','arena'])[1 + mod(venue_id, 3)]
+FROM generate_series(11, 100) AS generated(venue_id)
+JOIN cities c ON c.city_id = 1 + mod(venue_id - 11, 60);
+
+INSERT INTO competitions (competition_id, sport_type_id, name)
+SELECT
+    competition_id,
+    1 + mod(competition_id - 11, 10),
+    st.name || CASE WHEN competition_id <= 20
+        THEN ' National Championship'
+        ELSE ' Regional Cup' END
+FROM generate_series(11, 30) AS generated(competition_id)
+JOIN sport_types st ON st.sport_type_id = 1 + mod(competition_id - 11, 10);
+
+INSERT INTO matches (
+    match_id, sport_type_id, competition_id, organizer_id,
+    home_team_id, away_team_id, venue_id, match_datetime, status
+)
+SELECT
+    match_id,
+    1 + mod(match_id - 11, 10) AS sport_type_id,
+    11 + mod(match_id - 11, 10) +
+        CASE WHEN mod((match_id - 11) / 10, 2) = 1 THEN 10 ELSE 0 END,
+    match_id,
+    21 + mod(match_id - 11, 10) + 20 * ((match_id - 11) / 10),
+    31 + mod(match_id - 11, 10) + 20 * ((match_id - 11) / 10),
+    match_id,
+    CASE WHEN mod(match_id, 23) = 0
+        THEN CURRENT_TIMESTAMP - make_interval(days => 5 + mod(match_id, 45), hours => mod(match_id, 19))
+        ELSE CURRENT_TIMESTAMP + make_interval(days => 2 + mod(match_id * 11, 180), hours => 12 + mod(match_id, 9))
+    END,
+    CASE WHEN mod(match_id, 23) = 0 THEN 'finished'
+         WHEN mod(match_id, 19) = 0 THEN 'cancelled'
+         WHEN mod(match_id, 13) = 0 THEN 'postponed'
+         ELSE 'scheduled' END
+FROM generate_series(11, 100) AS generated(match_id);
+
+-- Forty-eight distinct seats per venue provide enough capacity for every match.
+INSERT INTO seats (seat_id, venue_id, section_name, row_number, seat_number)
+SELECT
+    1000 + (venue_id - 1) * 48 + slot,
+    venue_id,
+    (ARRAY['North','East','West','South','Premium','Family','Accessible','Media'])[1 + ((slot - 1) / 6)],
+    (1 + mod((slot - 1) / 3, 2))::text,
+    (1 + mod(slot - 1, 3))::text
+FROM generate_series(1, 100) AS venues(venue_id)
+CROSS JOIN generate_series(1, 48) AS seat_slots(slot);
+
+-- Each match receives a varied target of 28..36 tickets. Existing tickets are
+-- retained and only the missing capacity is generated with unused venue seats.
+WITH match_targets AS (
+    SELECT m.match_id, m.venue_id, m.sport_type_id, m.status AS match_status,
+           28 + mod(m.match_id * 7, 9) AS target_count,
+           count(t.ticket_id)::int AS existing_count
+    FROM matches m
+    LEFT JOIN tickets t ON t.match_id = m.match_id
+    GROUP BY m.match_id, m.venue_id, m.sport_type_id, m.status
+), candidate_seats AS (
+    SELECT mt.*, s.seat_id, s.section_name, s.row_number, s.seat_number,
+           row_number() OVER (PARTITION BY mt.match_id ORDER BY s.seat_id) AS seat_rank
+    FROM match_targets mt
+    JOIN seats s ON s.venue_id = mt.venue_id AND s.seat_id >= 1000
+), missing_tickets AS (
+    SELECT *,
+           1 + mod(seat_rank + match_id * 3, 10)::int AS category_id
+    FROM candidate_seats
+    WHERE seat_rank <= target_count - existing_count
+), numbered_tickets AS (
+    SELECT 31 + row_number() OVER (ORDER BY match_id, seat_id) AS ticket_id, *
+    FROM missing_tickets
+)
+INSERT INTO tickets (
+    ticket_id, match_id, venue_id, category_id, seat_id, price, status, created_at
+)
+SELECT
+    ticket_id,
+    match_id,
+    venue_id,
+    category_id,
+    seat_id,
+    90000 + sport_type_id * 25000 + category_id * 65000 +
+        row_number::int * 15000 + seat_number::int * 7500 + mod(match_id, 7) * 10000,
+    CASE WHEN match_status = 'cancelled' THEN 'cancelled'
+         WHEN match_status = 'finished' AND mod(seat_rank, 5) = 0 THEN 'cancelled'
+         WHEN match_status = 'finished' THEN 'sold'
+         ELSE 'available' END,
+    CURRENT_TIMESTAMP - make_interval(days => (3 + mod(match_id * 5 + seat_rank, 120))::int)
+FROM numbered_tickets;
+
+INSERT INTO orders (order_id, user_id, status, reserved_at, reserved_until)
+SELECT
+    order_id,
+    14 + mod(order_id * 7, 117),
+    order_status,
+    reserved_at,
+    reserved_at + INTERVAL '15 minutes'
+FROM (
+    SELECT order_id,
+           CASE WHEN mod(order_id, 11) = 0 THEN 'pending'
+                WHEN mod(order_id, 7) = 0 THEN 'expired'
+                WHEN mod(order_id, 5) = 0 THEN 'cancelled'
+                WHEN mod(order_id, 4) = 0 THEN 'partially_cancelled'
+                ELSE 'paid' END AS order_status,
+           CASE WHEN mod(order_id, 11) = 0
+                THEN CURRENT_TIMESTAMP - make_interval(mins => mod(order_id, 5))
+                ELSE CURRENT_TIMESTAMP - make_interval(days => 1 + mod(order_id * 3, 180), hours => mod(order_id, 12))
+           END AS reserved_at
+    FROM generate_series(13, 120) AS generated(order_id)
+) generated_orders;
+
+WITH order_slots AS (
+    SELECT o.order_id, o.status AS order_status, o.reserved_at, o.reserved_until, slot,
+           row_number() OVER (ORDER BY o.order_id, slot) AS ticket_rank
+    FROM orders o
+    CROSS JOIN LATERAL generate_series(
+        1,
+        CASE WHEN o.status = 'partially_cancelled' THEN 2
+             ELSE 1 + mod(o.order_id, 2)::int END
+    ) AS slots(slot)
+    WHERE o.order_id >= 13
+), ticket_pool AS (
+    SELECT t.ticket_id, t.price,
+           row_number() OVER (ORDER BY t.match_id, t.ticket_id) AS ticket_rank
+    FROM tickets t
+    JOIN matches m ON m.match_id = t.match_id
+    WHERE t.ticket_id > 31
+      AND t.status = 'available'
+      AND m.status IN ('scheduled', 'postponed')
+), reservation_rows AS (
+    SELECT os.*, tp.ticket_id, tp.price,
+           18 + row_number() OVER (ORDER BY os.order_id, os.slot) AS reservation_id
+    FROM order_slots os
+    JOIN ticket_pool tp USING (ticket_rank)
+)
+INSERT INTO reservations (
+    reservation_id, order_id, ticket_id, status,
+    price_at_reservation, created_at, cancelled_at
+)
+SELECT
+    reservation_id,
+    order_id,
+    ticket_id,
+    CASE WHEN order_status = 'paid' THEN 'paid'
+         WHEN order_status = 'pending' THEN 'pending'
+         WHEN order_status = 'expired' THEN 'expired'
+         WHEN order_status = 'cancelled' THEN 'cancelled'
+         WHEN slot = 1 THEN 'paid'
+         ELSE 'cancelled' END,
+    price,
+    reserved_at,
+    CASE WHEN order_status IN ('expired', 'cancelled')
+              OR (order_status = 'partially_cancelled' AND slot > 1)
+         THEN reserved_until + INTERVAL '5 minutes'
+         ELSE NULL END
+FROM reservation_rows;
+
+UPDATE tickets t
+SET status = CASE WHEN r.status = 'paid' THEN 'sold'
+                  WHEN r.status = 'pending' THEN 'reserved'
+                  ELSE 'available' END
+FROM reservations r
+WHERE r.ticket_id = t.ticket_id
+  AND r.reservation_id > 18;
+
+INSERT INTO payments (
+    payment_id, order_id, amount, method, status, paid_at, transaction_code
+)
+SELECT
+    12 + row_number() OVER (ORDER BY o.order_id),
+    o.order_id,
+    CASE WHEN o.status = 'partially_cancelled'
+         THEN sum(r.price_at_reservation) FILTER (WHERE r.status = 'paid')
+         ELSE sum(r.price_at_reservation) END,
+    (ARRAY['bank_card','wallet','crypto'])[1 + mod(o.order_id, 3)],
+    CASE WHEN o.status IN ('paid', 'partially_cancelled') THEN 'success'
+         WHEN o.status = 'pending' THEN 'pending'
+         ELSE 'failed' END,
+    CASE WHEN o.status IN ('paid', 'partially_cancelled')
+         THEN o.reserved_at + INTERVAL '4 minutes' ELSE NULL END,
+    'SEED-TX-' || lpad(o.order_id::text, 5, '0')
+FROM orders o
+JOIN reservations r ON r.order_id = o.order_id
+WHERE o.order_id >= 13
+GROUP BY o.order_id, o.status, o.reserved_at;
+
+WITH generated_reports AS (
+    SELECT report_id, row_number() OVER (ORDER BY report_id) AS subject_rank
+    FROM generate_series(11, 100) AS generated(report_id)
+), reservation_subjects AS (
+    SELECT r.reservation_id, r.order_id, o.user_id,
+           row_number() OVER (ORDER BY r.reservation_id) AS subject_rank
+    FROM reservations r
+    JOIN orders o ON o.order_id = r.order_id
+    WHERE r.reservation_id > 18
+), ticket_subjects AS (
+    SELECT t.ticket_id, row_number() OVER (ORDER BY t.ticket_id DESC) AS subject_rank
+    FROM tickets t
+    WHERE t.ticket_id > 31
+)
+INSERT INTO reports (
+    report_id, user_id, order_id, ticket_id, reservation_id,
+    report_category_id, description, status, created_at,
+    reviewed_by_support_id, reviewed_at
+)
+SELECT
+    gr.report_id,
+    CASE WHEN mod(gr.report_id, 2) = 0 THEN rs.user_id
+         ELSE 14 + mod(gr.report_id * 7, 117) END,
+    CASE WHEN mod(gr.report_id, 2) = 0 THEN rs.order_id ELSE NULL END,
+    CASE WHEN mod(gr.report_id, 2) = 1 THEN ts.ticket_id ELSE NULL END,
+    CASE WHEN mod(gr.report_id, 2) = 0 THEN rs.reservation_id ELSE NULL END,
+    1 + mod(gr.report_id * 3, 10),
+    (ARRAY[
+        'Payment confirmation needs review',
+        'Seat information differs from expectation',
+        'Venue access instructions were unclear',
+        'Ticket price requires clarification',
+        'Match schedule notification was delayed'
+    ])[1 + mod(gr.report_id, 5)] || ' (sample report ' || gr.report_id || ')',
+    CASE WHEN mod(gr.report_id, 5) = 0 THEN 'rejected'
+         WHEN mod(gr.report_id, 3) = 0 THEN 'reviewed'
+         ELSE 'pending' END,
+    CURRENT_TIMESTAMP - make_interval(days => mod(gr.report_id * 5, 150), hours => mod(gr.report_id, 20)),
+    CASE WHEN mod(gr.report_id, 5) = 0 OR mod(gr.report_id, 3) = 0
+         THEN 11 + mod(gr.report_id, 3) ELSE NULL END,
+    CASE WHEN mod(gr.report_id, 5) = 0 OR mod(gr.report_id, 3) = 0
+         THEN CURRENT_TIMESTAMP - make_interval(days => mod(gr.report_id * 5, 150)) + INTERVAL '2 hours'
+         ELSE NULL END
+FROM generated_reports gr
+LEFT JOIN reservation_subjects rs
+    ON mod(gr.report_id, 2) = 0 AND rs.subject_rank = (gr.subject_rank + 1) / 2
+LEFT JOIN ticket_subjects ts
+    ON mod(gr.report_id, 2) = 1 AND ts.subject_rank = (gr.subject_rank + 1) / 2;
+
+INSERT INTO ticket_facilities (ticket_id, facility_id)
+SELECT
+    t.ticket_id,
+    1 + mod(t.ticket_id + facility_slot * 3, 10)
+FROM tickets t
+CROSS JOIN LATERAL generate_series(1, 1 + mod(t.ticket_id, 3)::int) AS slots(facility_slot)
+WHERE t.ticket_id > 31
+  AND mod(t.ticket_id, 5) = 0;
+
 SELECT setval('provinces_province_id_seq', (SELECT MAX(province_id) FROM provinces));
 SELECT setval('cities_city_id_seq', (SELECT MAX(city_id) FROM cities));
 SELECT setval('users_user_id_seq', (SELECT MAX(user_id) FROM users));

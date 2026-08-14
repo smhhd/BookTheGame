@@ -40,8 +40,7 @@ curl http://localhost:3000/health/search
 ## گزارش و پشتیبان
 
 1. کاربر برای یک رزرو گزارش ثبت و وضعیت pending را مشاهده کند.
-2. با OTP حساب Seed به نام `support1@example.com` وارد شوید (در Docker مقدار
-   `EXPOSE_DEV_OTP=true` است).
+2. با OTP ارسال‌شده به ایمیل حساب Seed به نام `support1@example.com` وارد شوید.
 3. پنل پشتیبان باید قابل مشاهده باشد؛ گزارش را پاسخ دهید و وضعیت را تغییر دهید.
 4. با حساب spectator مستقیماً `/support` را باز کنید؛ UI باید Redirect کند.
 5. درخواست مستقیم `/api/admin/reports` با JWT spectator باید `403` بدهد.

@@ -58,7 +58,13 @@ services:
       ELASTICSEARCH_REQUEST_TIMEOUT_MS: 10000
       JWT_SECRET: docker-development-jwt-secret-change-123456
       OTP_HASH_SECRET: docker-development-otp-secret-change-123456
-      EXPOSE_DEV_OTP: "true"
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Book The Game}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
       CORS_ORIGIN: http://localhost:5173
     ports: ["3000:3000"]
   search-indexer:
@@ -75,6 +81,9 @@ services:
       ELASTICSEARCH_REQUEST_TIMEOUT_MS: 30000
       JWT_SECRET: docker-development-jwt-secret-change-123456
       OTP_HASH_SECRET: docker-development-otp-secret-change-123456
+      SMTP_USER: ${SMTP_USER:-indexer@example.invalid}
+      SMTP_PASS: ${SMTP_PASS:-not-used-by-indexer}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-indexer@example.invalid}
     command: ["npm", "run", "search:reindex:prod"]
   frontend:
     build:

@@ -23,7 +23,7 @@ API در [`docs/phase4-api.md`](docs/phase4-api.md) و سناریوهای دست
 Validation با Zod، احراز هویت با JWT، هش رمز با bcryptjs، امنیت HTTP با Helmet
 و محدودسازی Auth، جستجو، رزرو و پرداخت با express-rate-limit انجام می‌شود. Redis فقط برای OTP و
 Cache-Aside و Elasticsearch فقط برای جستجو استفاده می‌شود. خطاهای عملیاتی Cache باعث شکست عملیات اصلی
-PostgreSQL نمی‌شوند؛ بااین‌حال OTP به Redis وابسته است و اتصال اولیه Redis طبق
+PostgreSQL نمی‌شوند؛ بااین‌حال OTP به Redis و ارسال ایمیل SMTP وابسته است و اتصال اولیه Redis طبق
 سیاست reconnect کلاینت تا زمان برقراری دوباره تلاش می‌شود.
 
 ## تطبیق با Schema واقعی
@@ -143,6 +143,10 @@ Client مرکزی از `VITE_API_BASE_URL` و `VITE_API_TIMEOUT_MS` استفاد
 
 ## Docker
 
+پیش از اجرای Backend، مقادیر `SMTP_USER`، `SMTP_PASS` و `SMTP_FROM_EMAIL` را
+در Environment تنظیم کنید. برای Gmail، مقدار `SMTP_PASS` باید Google App
+Password باشد؛ رمز اصلی حساب را استفاده نکنید.
+
 ```bash
 docker compose up --build
 ```
@@ -164,7 +168,7 @@ Compose در اولین ساخت Volume، Schema، Index، Sample، Function و 
 | `GET /health` | عمومی | ندارد | `{}` | `200` |
 | `GET /health/search` | عمومی | ندارد | سلامت Elastic و صف Sync معوق | `200` |
 | `POST /api/auth/signup` | عمومی | Body: `firstName`, `lastName`, `password` و حداقل یکی از `email`/`phone`؛ `cityId?` | `user` عمومی بدون هش رمز، `token` | `201` |
-| `POST /api/auth/otp/request` | عمومی | Body: `identifier` (ایمیل یا تلفن) | `expiresInSeconds` و فقط در محیط مجاز `devOtp` | `200` |
+| `POST /api/auth/otp/request` | عمومی | Body: `identifier` (ایمیل یا تلفن) | فقط `expiresInSeconds`؛ کد همیشه به ایمیل ثبت‌شده کاربر ارسال می‌شود | `200` |
 | `POST /api/auth/otp/verify` | عمومی | Body: `identifier`, `otp` شش‌رقمی | `user` عمومی، `token` | `200` |
 | `GET /api/users/me` | کاربر | ندارد | پروفایل شامل شناسه، نقش، تماس، شهر، تصویر، تولد، کیف پول و وضعیت | `200` |
 | `PATCH /api/users/me` | کاربر | Body: حداقل یکی از `firstName`, `lastName`, `email`, `phone`, `cityId`, `profileImageUrl`, `birthDate` | پروفایل به‌روزشده | `200` |
@@ -236,8 +240,9 @@ Authorization: Bearer <token>
 کلیدها `otp:email:<normalized>` یا `otp:phone:<normalized>` هستند. خود کد ذخیره
 نمی‌شود؛ HMAC آن همراه شمارنده تلاش و TTL ذخیره می‌گردد. Rate limit توزیع‌شده
 در Redis و Rate limit HTTP هر دو فعال‌اند. پاسخ Request وجود حساب را افشا
-نمی‌کند. فقط با `NODE_ENV!=production` و `EXPOSE_DEV_OTP=true` کد در پاسخ
-آزمایشی می‌آید؛ هیچ OTP یا رمز عبوری Log نمی‌شود.
+نمی‌کند و کد در پاسخ، URL یا Log قرار نمی‌گیرد. ارسال با Gmail SMTP و Google
+App Password متغیر `SMTP_PASS` انجام می‌شود. در شکست ارسال، همان OTP به‌صورت
+شرطی حذف می‌شود و OTP جدیدترِ درخواست هم‌زمان دست‌نخورده می‌ماند.
 
 ## تراکنش و همروندی
 
@@ -277,7 +282,7 @@ cd frontend && npm test
 cd frontend && npm run build
 ```
 
-۱۵ Suite و ۳۵ تست Backend علاوه بر رگرسیون فاز سوم، Query/Mapping، Reindex
+۱۷ Suite و ۴۶ تست Backend علاوه بر رگرسیون فاز سوم، Query/Mapping، Reindex
 دسته‌ای، Cache Hit/Miss و Fallback را پوشش می‌دهند. ۳ فایل و ۶ تست Frontend
 جستجو، فیلتر، حالت خالی، Route خصوصی/پشتیبان و جریان رزرو تا پرداخت را بررسی
 می‌کنند؛ سناریوهای تکمیلی دستی در مستند تست فاز چهارم آمده‌اند.
@@ -299,13 +304,14 @@ Script دو Promise هم‌زمان می‌فرستد و سپس Assert می‌ک
 
 `postman/BookTheGame.postman_collection.json` را Import و `baseUrl` را تنظیم
 کنید. Collection Runner را از اولین درخواست (`Health`) اجرا کنید. ایمیل تست
-یکتا ساخته می‌شود، OTP آزمایشی و JWT به‌صورت خودکار بین درخواست‌ها انتقال
-می‌یابند و سه Assertion عمومی برای JSON بودن، قالب استاندارد پاسخ و نبود خطای
+یکتا ساخته می‌شود و JWT به‌صورت خودکار بین درخواست‌ها انتقال می‌یابد. OTP باید
+از ایمیل دریافت و در متغیر Collection به نام `otp` قرار داده شود. سه Assertion
+عمومی برای JSON بودن، قالب استاندارد پاسخ و نبود خطای
 پردازش‌نشدهٔ `5xx` روی تک‌تک درخواست‌ها اجرا می‌شود.
 
 Response واقعی همه درخواست‌های اجراشده، همراه Method، URL و Status، در متغیر
-Collection به نام `phase4ResponseLog` ثبت می‌شود؛ مقادیر حساس `token` و
-`devOtp` در این گزارش با `<redacted>` جایگزین می‌شوند. پس از Run، این متغیر را
+Collection به نام `phase4ResponseLog` ثبت می‌شود؛ مقدار حساس `token`
+در این گزارش با `<redacted>` جایگزین می‌شود. پس از Run، این متغیر را
 از تب Variables می‌توان مشاهده یا همراه Collection خروجی گرفت. برای مسیرهای
 `/api/admin` ابتدا متغیر `supportToken` را با JWT یک کاربر `support` پر کنید و
 شناسه‌های `ticketId`، `reservationId` و `reportId` را با دادهٔ جاری هماهنگ

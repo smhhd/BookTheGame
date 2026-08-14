@@ -50,7 +50,7 @@
           "  if (Array.isArray(value)) return value.map(redact);",
           "  if (!value || typeof value !== 'object') return value;",
           "  return Object.keys(value).reduce(function (safe, key) {",
-          "    safe[key] = ['token', 'devOtp'].includes(key) ? '<redacted>' : redact(value[key]);",
+          "    safe[key] = ['token'].includes(key) ? '<redacted>' : redact(value[key]);",
           "    return safe;",
           "  }, {});",
           "};",
@@ -80,7 +80,7 @@
         },
         {
           "name": "OTP Request",
-          "event": [{"listen": "test", "script": {"exec": ["const j=pm.response.json(); if(j.data&&j.data.devOtp) pm.collectionVariables.set('otp',j.data.devOtp);"]}}],
+          "event": [{"listen": "test", "script": {"exec": ["pm.test('OTP is never exposed in the response', function () { const j=pm.response.json(); pm.expect(j.data || {}).not.to.have.property('devOtp'); });"]}}],
           "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"identifier\":\"{{testEmail}}\"}"}, "url": "{{baseUrl}}/api/auth/otp/request"}
         },
         {
