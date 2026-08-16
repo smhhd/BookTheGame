@@ -28,6 +28,60 @@ export interface AuthSession { user: User; token: string }
 
 export interface Facility { facilityId: string; name: string }
 
+export interface MatchItem {
+  match_id: number;
+  competition_id?: number | null;
+  competition_name?: string | null;
+  sport_type: string;
+  home_team: string;
+  away_team: string;
+  venue_name: string;
+  city_name: string;
+  match_datetime: string;
+  match_status: string;
+  available_count?: number | null;
+  ticket_count?: number | null;
+  min_price?: string | number | null;
+  max_price?: string | number | null;
+}
+
+export interface CompetitionSummaryItem {
+  competition_id: number;
+  name: string;
+  sport_type: string;
+  ticket_count?: number | null;
+  min_price?: string | number | null;
+  max_price?: string | number | null;
+}
+
+export interface CompetitionTicketItem {
+  ticket_id: number;
+  price: number;
+  status: string;
+  category_id: number;
+  category_name: string;
+  match_datetime: string;
+  venue_name: string;
+  city_name: string;
+  sport_type: string;
+  match_id: number;
+  match_status: string;
+  sport_type_id: number;
+  competition_id: number;
+  competition_name: string;
+  home_team_id: number;
+  home_team: string;
+  away_team_id: number;
+  away_team: string;
+  venue_id: number;
+  city_id: number;
+  section_name: string;
+  row_number: string;
+  seat_number: string;
+  remaining_capacity: number;
+  facilities?: Array<{ facilityId: string; name: string }>;
+}
+
 export interface Ticket {
   ticket_id: string;
   match_id: string;

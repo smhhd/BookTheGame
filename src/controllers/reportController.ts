@@ -13,3 +13,7 @@ export async function create(request: Request, response: Response) {
 export async function my(request: Request, response: Response) {
   return success(response, await service.myReports(request.auth!.userId));
 }
+
+export async function categories(_request: Request, response: Response) {
+  return success(response, await service.listCategories());
+}

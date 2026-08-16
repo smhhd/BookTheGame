@@ -144,3 +144,10 @@ export async function updateReportStatus(
     return result.rows[0];
   });
 }
+
+export async function listCategories() {
+  const result = await query<{ report_category_id: number; name: string }>(
+    `SELECT report_category_id, name FROM report_categories ORDER BY name`,
+  );
+  return result.rows;
+}

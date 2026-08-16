@@ -5,7 +5,7 @@ const dateTime = z.string().datetime({ offset: true });
 
 export const venueQuerySchema = z
   .object({
-    cityId: id.optional()
+    cityId: id.optional(),
   })
   .strict();
 
@@ -34,7 +34,7 @@ export const ticketSearchSchema = z
       .enum(["matchDate", "price", "createdAt", "ticketId", "relevance"])
       .default("matchDate"),
     sortOrder: z.enum(["asc", "desc"]).default("asc"),
-    ...pagination
+    ...pagination,
   })
   .strict()
   .refine(
@@ -42,15 +42,19 @@ export const ticketSearchSchema = z
       value.minPrice === undefined ||
       value.maxPrice === undefined ||
       value.minPrice <= value.maxPrice,
-    { message: "minPrice must not exceed maxPrice" }
+    { message: "minPrice must not exceed maxPrice" },
   )
   .refine(
     (value) =>
       value.startDate === undefined ||
       value.endDate === undefined ||
       new Date(value.startDate) <= new Date(value.endDate),
-    { message: "startDate must not exceed endDate" }
+    { message: "startDate must not exceed endDate" },
   );
 
 export const ticketIdParamsSchema = z.object({ ticketId: id }).strict();
+export const matchIdParamsSchema = z.object({ matchId: id }).strict();
+export const competitionIdParamsSchema = z
+  .object({ competitionId: id })
+  .strict();
 export type TicketSearchInput = z.infer<typeof ticketSearchSchema>;

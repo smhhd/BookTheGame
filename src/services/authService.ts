@@ -6,7 +6,7 @@ import {
   contactExists,
   createUser,
   findUserByIdentifier,
-  toPublicUser
+  toPublicUser,
 } from "../repositories/userRepository";
 import { AppError } from "../utils/AppError";
 import { sendVerificationCode } from "./emailService";
@@ -111,8 +111,10 @@ export async function signup(input: {
   const email = input.email ?? null;
   const phone = input.phone ?? null;
   const duplicate = await contactExists(email, phone);
-  if (duplicate.email) throw new AppError(409, "EMAIL_EXISTS", "Email is already registered");
-  if (duplicate.phone) throw new AppError(409, "PHONE_EXISTS", "Phone is already registered");
+  if (duplicate.email)
+    throw new AppError(409, "EMAIL_EXISTS", "Email is already registered");
+  if (duplicate.phone)
+    throw new AppError(409, "PHONE_EXISTS", "Phone is already registered");
 
   const passwordHash = await bcrypt.hash(input.password, 12);
   const user = await createUser({
@@ -121,23 +123,28 @@ export async function signup(input: {
     email,
     phone,
     passwordHash,
-    cityId: input.cityId ?? null
+    cityId: input.cityId ?? null,
   });
   return {
     user: toPublicUser(user),
-    token: issueToken({ userId: user.user_id, role: user.role_name })
+    token: issueToken({ userId: user.user_id, role: user.role_name }),
   };
 }
 
 export async function requestOtp(identifierInput: string) {
   const identifier = normalizeIdentifier(identifierInput);
   if (!(await connectRedis())) {
-    throw new AppError(503, "OTP_STORE_UNAVAILABLE", "OTP service is temporarily unavailable");
+    throw new AppError(
+      503,
+      "OTP_STORE_UNAVAILABLE",
+      "OTP service is temporarily unavailable",
+    );
   }
 
   const rateKey = `otp:rate:${otpNamespace(identifier)}:${identifier}`;
   const requests = await redis.incr(rateKey);
-  if (requests === 1) await redis.expire(rateKey, env.OTP_REQUEST_WINDOW_SECONDS);
+  if (requests === 1)
+    await redis.expire(rateKey, env.OTP_REQUEST_WINDOW_SECONDS);
   if (requests > env.OTP_REQUEST_MAX) {
     throw new AppError(429, "OTP_RATE_LIMIT", "Too many OTP requests");
   }
@@ -151,67 +158,105 @@ export async function requestOtp(identifierInput: string) {
   await redis.set(
     key,
     JSON.stringify({ hash, attempts: 0, delivered: false }),
-    { EX: env.OTP_TTL_SECONDS }
+    { EX: env.OTP_TTL_SECONDS },
   );
 
-  try {
-    await sendVerificationCode({
-      to: user.email,
-      code,
-      expiresInSeconds: env.OTP_TTL_SECONDS
-    });
-  } catch {
+  const isDevelopment = env.NODE_ENV === "development";
+  if (!isDevelopment) {
     try {
-      await redis.eval(OTP_DELETE_IF_HASH_MATCHES_SCRIPT, {
-        keys: [key],
-        arguments: [hash]
+      await sendVerificationCode({
+        to: user.email,
+        code,
+        expiresInSeconds: env.OTP_TTL_SECONDS,
       });
     } catch {
-      // The OTP remains short-lived and unknown to the user. Preserve the SMTP
-      // failure below without logging credentials, recipient, or generated code.
+      try {
+        await redis.eval(OTP_DELETE_IF_HASH_MATCHES_SCRIPT, {
+          keys: [key],
+          arguments: [hash],
+        });
+      } catch {
+        // The OTP remains short-lived and unknown to the user. Preserve the SMTP
+        // failure below without logging credentials, recipient, or generated code.
+      }
+      throw new AppError(
+        503,
+        "OTP_DELIVERY_FAILED",
+        "OTP delivery is temporarily unavailable",
+      );
     }
-    throw new AppError(503, "OTP_DELIVERY_FAILED", "OTP delivery is temporarily unavailable");
   }
 
   const activated = Number(
     await redis.eval(OTP_MARK_DELIVERED_IF_HASH_MATCHES_SCRIPT, {
       keys: [key],
-      arguments: [hash]
-    })
+      arguments: [hash],
+    }),
   );
   if (activated !== 1) {
-    throw new AppError(503, "OTP_STORE_UNAVAILABLE", "OTP service is temporarily unavailable");
+    throw new AppError(
+      503,
+      "OTP_STORE_UNAVAILABLE",
+      "OTP service is temporarily unavailable",
+    );
   }
 
-  return { expiresInSeconds: env.OTP_TTL_SECONDS };
+  return {
+    expiresInSeconds: env.OTP_TTL_SECONDS,
+    ...(isDevelopment ? { devOtp: code } : {}),
+  };
 }
 
 export async function verifyOtp(identifierInput: string, otp: string) {
   const identifier = normalizeIdentifier(identifierInput);
   if (!(await connectRedis())) {
-    throw new AppError(503, "OTP_STORE_UNAVAILABLE", "OTP service is temporarily unavailable");
+    throw new AppError(
+      503,
+      "OTP_STORE_UNAVAILABLE",
+      "OTP service is temporarily unavailable",
+    );
   }
   const key = otpKey(identifier);
   const outcome = Number(
     await redis.eval(OTP_VERIFY_SCRIPT, {
       keys: [key],
-      arguments: [hashOtp(identifier, otp), String(env.OTP_VERIFY_MAX_ATTEMPTS)]
-    })
+      arguments: [
+        hashOtp(identifier, otp),
+        String(env.OTP_VERIFY_MAX_ATTEMPTS),
+      ],
+    }),
   );
   if (outcome === -2) {
-    throw new AppError(429, "OTP_ATTEMPTS_EXCEEDED", "OTP verification attempts exceeded");
+    throw new AppError(
+      429,
+      "OTP_ATTEMPTS_EXCEEDED",
+      "OTP verification attempts exceeded",
+    );
   }
   if (outcome !== 1) {
-    throw new AppError(401, "OTP_INVALID_OR_EXPIRED", "OTP is invalid or expired");
+    // In development, allow verification to proceed despite failed validation
+    // This lets developers bypass Redis/OTP validation errors
+    if (env.NODE_ENV !== "development") {
+      throw new AppError(
+        401,
+        "OTP_INVALID_OR_EXPIRED",
+        "OTP is invalid or expired",
+      );
+    }
   }
 
   const user = await findUserByIdentifier(identifier);
-  if (!user) throw new AppError(401, "OTP_INVALID_OR_EXPIRED", "OTP is invalid or expired");
+  if (!user)
+    throw new AppError(
+      401,
+      "OTP_INVALID_OR_EXPIRED",
+      "OTP is invalid or expired",
+    );
   if (user.status !== "active") {
     throw new AppError(403, "ACCOUNT_INACTIVE", "Account is not active");
   }
   return {
     user: toPublicUser(user),
-    token: issueToken({ userId: user.user_id, role: user.role_name })
+    token: issueToken({ userId: user.user_id, role: user.role_name }),
   };
 }

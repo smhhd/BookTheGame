@@ -9,3 +9,4 @@ export const reportRoutes = Router();
 reportRoutes.use(authenticate);
 reportRoutes.post("/", validate({ body: createReportSchema }), asyncHandler(controller.create));
 reportRoutes.get("/my", asyncHandler(controller.my));
+reportRoutes.get("/categories", asyncHandler(controller.categories));

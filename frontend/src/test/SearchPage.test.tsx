@@ -5,7 +5,12 @@ import { api } from "../api/endpoints";
 import { SearchPage } from "../pages/SearchPage";
 
 vi.mock("../api/endpoints", () => ({
-  api: { searchTickets: vi.fn(), cities: vi.fn(), venues: vi.fn() }
+  api: {
+    searchTickets: vi.fn(),
+    cities: vi.fn(),
+    venues: vi.fn(),
+    getCompetitions: vi.fn(),
+  },
 }));
 
 const ticket = {
@@ -21,6 +26,7 @@ describe("SearchPage", () => {
   beforeEach(() => {
     vi.mocked(api.cities).mockResolvedValue({ items: [] });
     vi.mocked(api.venues).mockResolvedValue({ items: [] });
+    vi.mocked(api.getCompetitions).mockResolvedValue({ items: [] });
     vi.mocked(api.searchTickets).mockResolvedValue({ items: [ticket], pagination: { page: 1, limit: 12, total: 1, totalPages: 1 }, search: { source: "elasticsearch", tookMs: 4 } });
   });
 

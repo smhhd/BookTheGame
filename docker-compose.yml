@@ -37,7 +37,11 @@ services:
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fs http://localhost:9200/_cluster/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 30
@@ -61,10 +65,11 @@ services:
       SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_SECURE: ${SMTP_SECURE:-false}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_USER: ${SMTP_USER:-indexer@example.invalid}
+      SMTP_PASS: ${SMTP_PASS:-not-used-by-backend}
       SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Book The Game}
-      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-indexer@example.invalid}
+      # EXPOSE_DEV_OTP: "true"
       CORS_ORIGIN: http://localhost:5173
     ports: ["3000:3000"]
   search-indexer:
