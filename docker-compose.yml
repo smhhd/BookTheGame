@@ -1,0 +1,103 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: book_the_game
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d book_the_game"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./create_db.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./indexes.sql:/docker-entrypoint-initdb.d/02-indexes.sql:ro
+      - ./sample_data.sql:/docker-entrypoint-initdb.d/03-sample.sql:ro
+      - ./stored_procedures.sql:/docker-entrypoint-initdb.d/04-functions.sql:ro
+      - ./sql/migrations/001_add_payment_reports.sql:/docker-entrypoint-initdb.d/05-phase3.sql:ro
+      - ./sql/migrations/002_phase3_completeness.sql:/docker-entrypoint-initdb.d/06-phase3-completeness.sql:ro
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.17
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports: ["9200:9200"]
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fs http://localhost:9200/_cluster/health || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+  backend:
+    build: .
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      elasticsearch: { condition: service_healthy }
+      search-indexer: { condition: service_completed_successfully }
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/book_the_game
+      REDIS_URL: redis://redis:6379
+      ELASTICSEARCH_NODE: http://elasticsearch:9200
+      ELASTICSEARCH_INDEX: book_the_game_tickets_v1
+      ELASTICSEARCH_REQUEST_TIMEOUT_MS: 10000
+      JWT_SECRET: docker-development-jwt-secret-change-123456
+      OTP_HASH_SECRET: docker-development-otp-secret-change-123456
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-indexer@example.invalid}
+      SMTP_PASS: ${SMTP_PASS:-not-used-by-backend}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Book The Game}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-indexer@example.invalid}
+      # EXPOSE_DEV_OTP: "true"
+      CORS_ORIGIN: http://localhost:5173
+    ports: ["3000:3000"]
+  search-indexer:
+    build: .
+    depends_on:
+      postgres: { condition: service_healthy }
+      elasticsearch: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/book_the_game
+      REDIS_URL: redis://redis:6379
+      ELASTICSEARCH_NODE: http://elasticsearch:9200
+      ELASTICSEARCH_INDEX: book_the_game_tickets_v1
+      ELASTICSEARCH_REQUEST_TIMEOUT_MS: 30000
+      JWT_SECRET: docker-development-jwt-secret-change-123456
+      OTP_HASH_SECRET: docker-development-otp-secret-change-123456
+      SMTP_USER: ${SMTP_USER:-indexer@example.invalid}
+      SMTP_PASS: ${SMTP_PASS:-not-used-by-indexer}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-indexer@example.invalid}
+    command: ["npm", "run", "search:reindex:prod"]
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:3000
+    depends_on:
+      backend: { condition: service_started }
+    ports: ["5173:80"]
+volumes:
+  postgres_data:
+  elasticsearch_data:
